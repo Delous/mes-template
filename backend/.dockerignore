@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# git / ide / cache
+.git
+.gitignore
+.vscode
+.idea
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# tests/docs if not needed in image
+tests/
+docs/
+
+# local builds
+dist/
+build/

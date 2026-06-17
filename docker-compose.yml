@@ -1,0 +1,94 @@
+services:
+  db:
+    image: postgres:17
+    container_name: mes-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - monitoring
+
+  migrate:
+    image: delous/mes-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+    env_file:
+      - .env
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    networks:
+      - monitoring
+
+  create-admin:
+    image: delous/mes-backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: db
+    env_file:
+      - .env
+    command: ["python", "-m", "app.core.create_admin"]
+    restart: "no"
+    networks:
+      - monitoring
+
+  backend:
+    image: delous/mes-backend
+    container_name: mes-backend
+    restart: unless-stopped
+    depends_on:
+      create-admin:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: db
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - monitoring
+
+  frontend:
+    image: delous/mes-frontend
+    container_name: mes-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - monitoring
+
+volumes:
+  pg_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge
