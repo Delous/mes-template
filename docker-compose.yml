@@ -28,8 +28,6 @@ services:
       - .env
     command: ["alembic", "upgrade", "head"]
     restart: "no"
-    networks:
-      - monitoring
 
   create-admin:
     image: delous/mes-backend
@@ -42,8 +40,6 @@ services:
       - .env
     command: ["python", "-m", "app.core.create_admin"]
     restart: "no"
-    networks:
-      - monitoring
 
   backend:
     image: delous/mes-backend
@@ -58,8 +54,6 @@ services:
       - .env
     ports:
       - "8000:8000"
-    networks:
-      - monitoring
 
   frontend:
     image: delous/mes-frontend
@@ -71,8 +65,6 @@ services:
       - backend
     ports:
       - "3000:3000"
-    networks:
-      - monitoring
 
   grafana:
     image: grafana/grafana:latest
@@ -82,13 +74,7 @@ services:
       - grafana_data:/var/lib/grafana
     ports:
       - "3001:3000"
-    networks:
-      - monitoring
 
 volumes:
   pg_data:
   grafana_data:
-
-networks:
-  monitoring:
-    driver: bridge
