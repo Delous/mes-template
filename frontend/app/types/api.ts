@@ -301,16 +301,6 @@ export type UpdateTaskPayload = {
   comment?: string;
 };
 
-export type ValuesPayload = Record<string, string[]>;
-
-export type ValuesIngestResponse = {
-  status: "ok";
-  accepted_timestamps: number;
-  accepted_lines: number;
-  parsed_values: number;
-  to_insert: number;
-};
-
 export type ApiErrorBody = {
   detail?: unknown;
   message?: unknown;

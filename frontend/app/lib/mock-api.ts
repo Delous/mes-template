@@ -24,7 +24,6 @@ import type {
   UpdateUserPayload,
   UnitDto,
   UnitSummary,
-  ValuesPayload,
   WorkCenterDto,
   WorkCenterSummary,
   WorkstationDto,
@@ -252,8 +251,6 @@ let tasks: TaskDto[] = [
     updated_at: now,
   },
 ];
-
-const valuesStore = new Map<number, string[]>();
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -759,41 +756,6 @@ export async function deleteAdminWorkstation(id: number) {
     workstations: user.workstations.filter((workstation) => workstation.id !== id),
   }));
   return delay(undefined);
-}
-
-export async function postValues(payload: ValuesPayload) {
-  let acceptedTimestamps = 0;
-  let acceptedLines = 0;
-  let parsedValues = 0;
-
-  for (const [timestamp, lines] of Object.entries(payload)) {
-    const numericTimestamp = Number(timestamp);
-    if (!Number.isFinite(numericTimestamp) || numericTimestamp < 0) throw new Error("timestamp must be non-negative");
-    valuesStore.set(numericTimestamp, lines);
-    acceptedTimestamps += 1;
-    acceptedLines += lines.length;
-    parsedValues += lines.join(" ").split(/\s+/).filter((part) => part !== "NULL").length;
-  }
-
-  return delay({
-    status: "ok" as const,
-    accepted_timestamps: acceptedTimestamps,
-    accepted_lines: acceptedLines,
-    parsed_values: parsedValues,
-    to_insert: parsedValues,
-  });
-}
-
-export async function getValues(start: number, end: number) {
-  const result: ValuesPayload = {};
-
-  for (const [timestamp, lines] of valuesStore.entries()) {
-    if (timestamp >= start && timestamp < end) {
-      result[String(timestamp)] = lines;
-    }
-  }
-
-  return delay(result);
 }
 
 function makeUsername(fullName: string) {

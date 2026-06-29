@@ -268,18 +268,6 @@ select {
   grid-column: 1 / -1;
 }
 
-.code-output {
-  max-height: 360px;
-  overflow: auto;
-  padding: 12px;
-  border: 1px solid var(--gray-5);
-  border-radius: 8px;
-  background: var(--gray-2);
-  color: var(--gray-12);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 @media (max-width: 860px) {
   .app-shell {
     display: block;

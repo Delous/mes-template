@@ -17,8 +17,6 @@ import type {
   TaskDto,
   UpdateTaskPayload,
   UpdateUserPayload,
-  ValuesIngestResponse,
-  ValuesPayload,
   WorkstationDto,
 } from "@/types/api";
 
@@ -234,16 +232,4 @@ export async function createAdminWorkstation(payload: CreateWorkstationPayload) 
 export async function deleteAdminWorkstation(id: number) {
   if (useMockApi) return mockApi.deleteAdminWorkstation(id);
   await apiClient.delete(`/api/v1/admin/workstations/${id}`);
-}
-
-export async function postValues(payload: ValuesPayload) {
-  if (useMockApi) return mockApi.postValues(payload);
-  const response = await apiClient.post<ValuesIngestResponse>("/api/v1/values", payload);
-  return response.data;
-}
-
-export async function getValues(start: number, end: number) {
-  if (useMockApi) return mockApi.getValues(start, end);
-  const response = await apiClient.get<ValuesPayload>("/api/v1/values", { params: { start, end } });
-  return response.data;
 }
