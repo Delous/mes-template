@@ -4,14 +4,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge, Box, Button, Callout, Flex, Grid, Heading, Spinner, Text, TextField } from "@radix-ui/themes";
 import { Save, UserPlus } from "lucide-react";
 
-import {
-  createAdminUser,
-  getAdminUsers,
-  getAdminWorkstations,
-  normalizeApiError,
-  updateAdminUser,
-} from "@/lib/api";
-import type { AdminUserDto, UserRole, WorkstationDto } from "@/types/api";
+import { createAdminUser, getAdminUsers, getAdminWorkstations, normalizeApiError, updateAdminUser } from "@/lib/api";
+import type { AdminUserDto, EditableUserRole, UserRole, WorkstationDto } from "@/types/api";
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Администратор",
@@ -20,7 +14,7 @@ const roleLabels: Record<UserRole, string> = {
   storekeeper: "Кладовщик",
 };
 
-const editableRoles: Exclude<UserRole, "admin">[] = ["operator", "reviewer", "storekeeper"];
+const editableRoles: EditableUserRole[] = ["operator", "reviewer", "storekeeper"];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
@@ -28,6 +22,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -52,18 +47,18 @@ export default function UsersPage() {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
+    setNotice(null);
 
     const formData = new FormData(event.currentTarget);
 
     try {
-      await createAdminUser({
-        username: String(formData.get("username") ?? "").trim(),
+      const user = await createAdminUser({
         full_name: String(formData.get("full_name") ?? "").trim(),
         password: String(formData.get("password") ?? ""),
-        role: String(formData.get("role") ?? "operator") as Exclude<UserRole, "admin">,
-        workstation_ids: formData.getAll("workstation_ids").map(Number),
+        role: String(formData.get("role") ?? "operator") as EditableUserRole,
       });
       event.currentTarget.reset();
+      setNotice(`Пользователь создан. Логин: ${user.username}`);
       await loadData();
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
@@ -76,13 +71,14 @@ export default function UsersPage() {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
+    setNotice(null);
 
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
 
     try {
       await updateAdminUser(userId, {
-        role: String(formData.get("role") ?? "operator") as Exclude<UserRole, "admin">,
+        role: String(formData.get("role") ?? "operator") as EditableUserRole,
         password: password || undefined,
         workstation_ids: formData.getAll("workstation_ids").map(Number),
       });
@@ -100,7 +96,7 @@ export default function UsersPage() {
         Пользователи
       </Heading>
       <Text as="p" color="gray" size="2" mb="5">
-        Роли и привязка к рабочим постам.
+        Backend генерирует логин автоматически из ФИО.
       </Text>
 
       {error ? (
@@ -108,14 +104,15 @@ export default function UsersPage() {
           <Callout.Text>{error}</Callout.Text>
         </Callout.Root>
       ) : null}
+      {notice ? (
+        <Callout.Root color="green" mb="4">
+          <Callout.Text>{notice}</Callout.Text>
+        </Callout.Root>
+      ) : null}
 
       <Box className="surface" p="4" mb="4">
         <form onSubmit={handleCreate}>
-          <Grid columns={{ initial: "1", md: "5" }} gap="3" align="end">
-            <label>
-              <Text size="2">Логин</Text>
-              <TextField.Root name="username" mt="2" required maxLength={64} />
-            </label>
+          <Grid columns={{ initial: "1", md: "4" }} gap="3" align="end">
             <label>
               <Text size="2">ФИО</Text>
               <TextField.Root name="full_name" mt="2" required maxLength={256} />
@@ -138,7 +135,6 @@ export default function UsersPage() {
               <UserPlus size={16} /> Создать
             </Button>
           </Grid>
-          <WorkstationCheckboxes name="workstation_ids" workstations={workstations} selectedIds={[]} />
         </form>
       </Box>
 
@@ -176,6 +172,7 @@ export default function UsersPage() {
                         name="workstation_ids"
                         workstations={workstations}
                         selectedIds={user.workstations.map((workstation) => workstation.id)}
+                        disabled={user.role === "admin"}
                       />
                     </form>
                   </td>
@@ -186,6 +183,7 @@ export default function UsersPage() {
                       type="password"
                       placeholder="Новый пароль"
                       minLength={6}
+                      disabled={user.role === "admin"}
                     />
                   </td>
                   <td>
@@ -227,16 +225,18 @@ function WorkstationCheckboxes({
   name,
   workstations,
   selectedIds,
+  disabled,
 }: {
   name: string;
   workstations: WorkstationDto[];
   selectedIds: number[];
+  disabled?: boolean;
 }) {
   return (
     <Flex gap="3" wrap="wrap" mt="3">
       {workstations.map((workstation) => (
         <Text as="label" size="2" key={workstation.id} className="checkbox-label">
-          <input type="checkbox" name={name} value={workstation.id} defaultChecked={selectedIds.includes(workstation.id)} />
+          <input type="checkbox" name={name} value={workstation.id} defaultChecked={selectedIds.includes(workstation.id)} disabled={disabled} />
           {workstation.name}
         </Text>
       ))}

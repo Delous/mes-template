@@ -3,14 +3,22 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type {
   AdminUserDto,
   ApiErrorBody,
-  CreateTaskPayload,
+  CatalogDtoMap,
+  CatalogPayloadMap,
+  CatalogResource,
+  CatalogUpdatePayloadMap,
+  CreateOrderPayload,
   CreateUserPayload,
+  CreateWorkstationPayload,
   ListResponse,
   LoginPayload,
   MeDto,
+  OrderDto,
   TaskDto,
   UpdateTaskPayload,
   UpdateUserPayload,
+  ValuesIngestResponse,
+  ValuesPayload,
   WorkstationDto,
 } from "@/types/api";
 
@@ -86,9 +94,12 @@ export function normalizeApiError(error: unknown) {
     const message = error.response?.data?.message;
     if (typeof message === "string") return message;
 
+    if (error.response?.status === 400) return "Некорректные данные запроса.";
     if (error.response?.status === 401) return "Сессия истекла. Войдите снова.";
     if (error.response?.status === 403) return "Недостаточно прав для действия.";
     if (error.response?.status === 404) return "Данные не найдены.";
+    if (error.response?.status === 409) return "Действие конфликтует с текущими данными.";
+    if (error.response?.status === 422) return "Проверьте заполнение формы.";
 
     return error.message || "Ошибка API.";
   }
@@ -126,19 +137,71 @@ export async function getTask(id: number) {
   return response.data;
 }
 
-export async function createTask(payload: CreateTaskPayload) {
-  if (useMockApi) return mockApi.createTask(payload);
-  const response = await apiClient.post<TaskDto>("/api/v1/tasks", payload);
-  return response.data;
-}
-
 export async function updateTask(id: number, payload: UpdateTaskPayload) {
   if (useMockApi) return mockApi.updateTask(id, payload);
   const response = await apiClient.patch<TaskDto>(`/api/v1/tasks/${id}`, payload);
   return response.data;
 }
 
-export async function getAdminUsers(page = 1, size = 50) {
+export async function getOrders(page = 1, size = 20) {
+  if (useMockApi) return mockApi.getOrders(page, size);
+  const response = await apiClient.get<ListResponse<OrderDto>>("/api/v1/orders", { params: { page, size } });
+  return response.data;
+}
+
+export async function getOrder(id: number) {
+  if (useMockApi) return mockApi.getOrder(id);
+  const response = await apiClient.get<OrderDto>(`/api/v1/orders/${id}`);
+  return response.data;
+}
+
+export async function createOrder(payload: CreateOrderPayload) {
+  if (useMockApi) return mockApi.createOrder(payload);
+  const response = await apiClient.post<OrderDto>("/api/v1/orders", payload);
+  return response.data;
+}
+
+export async function getCatalog<R extends CatalogResource>(
+  resource: R,
+  page = 1,
+  size = 20,
+  includeDeleted = false,
+) {
+  if (useMockApi) return mockApi.getCatalog(resource, page, size, includeDeleted);
+  const response = await apiClient.get<ListResponse<CatalogDtoMap[R]>>(`/api/v1/catalogs/${resource}`, {
+    params: { page, size, include_deleted: includeDeleted },
+  });
+  return response.data;
+}
+
+export async function getCatalogItem<R extends CatalogResource>(resource: R, id: number) {
+  if (useMockApi) return mockApi.getCatalogItem(resource, id);
+  const response = await apiClient.get<CatalogDtoMap[R]>(`/api/v1/catalogs/${resource}/${id}`);
+  return response.data;
+}
+
+export async function createCatalogItem<R extends CatalogResource>(resource: R, payload: CatalogPayloadMap[R]) {
+  if (useMockApi) return mockApi.createCatalogItem(resource, payload);
+  const response = await apiClient.post<CatalogDtoMap[R]>(`/api/v1/catalogs/${resource}`, payload);
+  return response.data;
+}
+
+export async function updateCatalogItem<R extends CatalogResource>(
+  resource: R,
+  id: number,
+  payload: CatalogUpdatePayloadMap[R],
+) {
+  if (useMockApi) return mockApi.updateCatalogItem(resource, id, payload);
+  const response = await apiClient.patch<CatalogDtoMap[R]>(`/api/v1/catalogs/${resource}/${id}`, payload);
+  return response.data;
+}
+
+export async function deleteCatalogItem<R extends CatalogResource>(resource: R, id: number) {
+  if (useMockApi) return mockApi.deleteCatalogItem(resource, id);
+  await apiClient.delete(`/api/v1/catalogs/${resource}/${id}`);
+}
+
+export async function getAdminUsers(page = 1, size = 20) {
   if (useMockApi) return mockApi.getAdminUsers(page, size);
   const response = await apiClient.get<ListResponse<AdminUserDto>>("/api/v1/admin/users", { params: { page, size } });
   return response.data;
@@ -162,14 +225,25 @@ export async function getAdminWorkstations() {
   return response.data;
 }
 
-export async function createAdminWorkstation(payload: { name: string }) {
+export async function createAdminWorkstation(payload: CreateWorkstationPayload) {
   if (useMockApi) return mockApi.createAdminWorkstation(payload);
   const response = await apiClient.post<WorkstationDto>("/api/v1/admin/workstations", payload);
   return response.data;
 }
 
-export async function updateAdminWorkstation(id: number, payload: { name: string }) {
-  if (useMockApi) return mockApi.updateAdminWorkstation(id, payload);
-  const response = await apiClient.patch<WorkstationDto>(`/api/v1/admin/workstations/${id}`, payload);
+export async function deleteAdminWorkstation(id: number) {
+  if (useMockApi) return mockApi.deleteAdminWorkstation(id);
+  await apiClient.delete(`/api/v1/admin/workstations/${id}`);
+}
+
+export async function postValues(payload: ValuesPayload) {
+  if (useMockApi) return mockApi.postValues(payload);
+  const response = await apiClient.post<ValuesIngestResponse>("/api/v1/values", payload);
+  return response.data;
+}
+
+export async function getValues(start: number, end: number) {
+  if (useMockApi) return mockApi.getValues(start, end);
+  const response = await apiClient.get<ValuesPayload>("/api/v1/values", { params: { start, end } });
   return response.data;
 }

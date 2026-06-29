@@ -1,17 +1,20 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Box, Button, Callout, Flex, Grid, Heading, Spinner, Text, TextArea, TextField } from "@radix-ui/themes";
+import { Box, Button, Flex, Grid, Text, TextArea, TextField } from "@radix-ui/themes";
 import { ArrowLeft, Check, Pause, Play, RotateCcw, XCircle } from "lucide-react";
 
-import { getTask, normalizeApiError, updateTask } from "@/lib/api";
-import type { TaskDto, TaskStatus } from "@/types/api";
+import { useAuth } from "@/components/auth-context";
 import { TaskStatusBadge, TaskTypeBadge } from "@/components/task-status";
+import { ErrorNotice, formatDate, formatQuantity, LoadingState, PageHeader } from "@/components/page-tools";
+import { getTask, normalizeApiError, updateTask } from "@/lib/api";
+import type { TaskDto, TaskUpdateStatus, UserRole } from "@/types/api";
 
 export default function TaskPage() {
   const params = useParams<{ id: string }>();
+  const { user } = useAuth();
   const taskId = Number(params.id);
   const [task, setTask] = useState<TaskDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,9 +38,7 @@ export default function TaskPage() {
     void loadTask();
   }, [loadTask]);
 
-  const title = useMemo(() => (task ? `Задача #${task.id}` : "Задача"), [task]);
-
-  async function handleTransition(status: TaskStatus, event?: FormEvent<HTMLFormElement>) {
+  async function handleTransition(status: TaskUpdateStatus, event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     if (!task) return;
 
@@ -62,33 +63,21 @@ export default function TaskPage() {
 
   return (
     <div className="page-content">
-      <Flex align={{ initial: "start", sm: "center" }} justify="between" gap="4" mb="5" direction={{ initial: "column", sm: "row" }}>
-        <Box>
-          <Heading size="7">{title}</Heading>
-          {task ? (
-            <Text as="p" size="2" color="gray" mt="1">
-              {task.description || task.item.name}
-            </Text>
-          ) : null}
-        </Box>
-        <Button asChild variant="soft" color="gray">
-          <Link href="/tasks">
-            <ArrowLeft size={16} /> Назад
-          </Link>
-        </Button>
-      </Flex>
-
-      {error ? (
-        <Callout.Root color="red" mb="4">
-          <Callout.Text>{error}</Callout.Text>
-        </Callout.Root>
-      ) : null}
+      <PageHeader
+        title={task ? `Задача #${task.id}` : "Задача"}
+        description={task ? task.description || task.item.name : undefined}
+        action={
+          <Button asChild variant="soft" color="gray">
+            <Link href="/tasks">
+              <ArrowLeft size={16} /> Назад
+            </Link>
+          </Button>
+        }
+      />
+      <ErrorNotice message={error} />
 
       {loading ? (
-        <Flex className="surface empty-state" align="center" justify="center" gap="3">
-          <Spinner />
-          <Text color="gray">Загружаем задачу</Text>
-        </Flex>
+        <LoadingState label="Загружаем задачу" />
       ) : task ? (
         <>
           <Box className="surface" p="4" mb="4">
@@ -97,15 +86,12 @@ export default function TaskPage() {
                 <TaskTypeBadge type={task.task_type} />
                 <TaskStatusBadge status={task.status} />
               </Flex>
-              <TaskActions task={task} submitting={submitting} onTransition={handleTransition} />
+              <TaskActions task={task} role={user?.role} submitting={submitting} onTransition={handleTransition} />
             </Flex>
           </Box>
 
           <Grid columns={{ initial: "1", md: "2" }} gap="4">
             <Box className="surface" p="4">
-              <Heading size="4" mb="3">
-                Производство
-              </Heading>
               <Grid columns={{ initial: "1", sm: "2" }} gap="3">
                 <Detail label="Заказ" value={`#${task.order_id}`} />
                 <Detail label="Номенклатура" value={task.item.name} />
@@ -117,9 +103,6 @@ export default function TaskPage() {
             </Box>
 
             <Box className="surface" p="4">
-              <Heading size="4" mb="3">
-                Рабочие посты
-              </Heading>
               <Grid columns={{ initial: "1", sm: "2" }} gap="3">
                 <Detail label="Рабочий центр" value={task.work_center?.name ?? "Не указан"} />
                 <Detail label="Откуда" value={task.source_work_center?.name ?? "Не указано"} />
@@ -129,46 +112,60 @@ export default function TaskPage() {
             </Box>
           </Grid>
         </>
-      ) : (
-        <Box className="surface" p="5">
-          <Text color="gray">Задача не найдена</Text>
-        </Box>
-      )}
+      ) : null}
     </div>
   );
 }
 
 function TaskActions({
   task,
+  role,
   submitting,
   onTransition,
 }: {
   task: TaskDto;
+  role?: UserRole;
   submitting: boolean;
-  onTransition: (status: TaskStatus, event?: FormEvent<HTMLFormElement>) => void;
+  onTransition: (status: TaskUpdateStatus, event?: FormEvent<HTMLFormElement>) => void;
 }) {
-  if (task.status === "to_do") {
-    return (
-      <Button size="2" disabled={submitting} onClick={() => onTransition("in_progress")}>
-        <Play size={15} /> Взять в работу
-      </Button>
-    );
-  }
+  const canStart = task.status === "to_do" && ["operator", "reviewer", "storekeeper"].includes(role ?? "");
+  const canResume = task.status === "blocked" && ["admin", "operator", "storekeeper"].includes(role ?? "");
+  const canBlock = task.status === "in_progress" && ["admin", "operator", "storekeeper"].includes(role ?? "");
+  const canCompleteOperation = task.status === "in_progress" && task.task_type === "operation" && role === "operator";
+  const canCompleteSimple =
+    task.status === "in_progress" &&
+    task.task_type !== "operation" &&
+    (role === "reviewer" || role === "storekeeper" || role === "admin");
+  const canReject = ["to_do", "in_progress"].includes(task.status) && task.task_type === "quality_review" && role === "reviewer";
 
-  if (task.status === "blocked") {
-    return (
-      <Button size="2" variant="soft" disabled={submitting} onClick={() => onTransition("in_progress")}>
-        <RotateCcw size={15} /> Возобновить
-      </Button>
-    );
-  }
-
-  if (task.task_type === "quality_review" && task.status === "in_progress") {
-    return (
-      <Flex gap="2" wrap="wrap">
-        <Button size="2" color="green" disabled={submitting} onClick={() => onTransition("done")}>
-          <Check size={15} /> Принять
+  return (
+    <Flex gap="2" wrap="wrap" align="center">
+      {canStart ? (
+        <Button size="2" disabled={submitting} onClick={() => onTransition("in_progress")}>
+          <Play size={15} /> Взять в работу
         </Button>
+      ) : null}
+      {canResume ? (
+        <Button size="2" variant="soft" disabled={submitting} onClick={() => onTransition("in_progress")}>
+          <RotateCcw size={15} /> Возобновить
+        </Button>
+      ) : null}
+      {canCompleteOperation ? (
+        <form onSubmit={(event) => onTransition("done", event)}>
+          <Flex gap="2" wrap="wrap" align="center">
+            <TextField.Root name="actual_quantity_delta" placeholder="Выпущено" size="2" required />
+            <Button size="2" color="green" type="submit" disabled={submitting}>
+              <Check size={15} /> Завершить
+            </Button>
+          </Flex>
+        </form>
+      ) : null}
+      {canCompleteSimple ? (
+        <Button size="2" color="green" disabled={submitting} onClick={() => onTransition("done")}>
+          <Check size={15} /> Завершить
+        </Button>
+      ) : null}
+      {canReject ? (
         <form onSubmit={(event) => onTransition("rejected", event)}>
           <Flex gap="2" wrap="wrap" align="center">
             <TextField.Root name="defect_quantity_delta" placeholder="Брак" size="2" required />
@@ -178,31 +175,14 @@ function TaskActions({
             </Button>
           </Flex>
         </form>
-      </Flex>
-    );
-  }
-
-  if (task.status === "in_progress") {
-    return (
-      <Flex gap="2" wrap="wrap">
-        <form onSubmit={(event) => onTransition("done", event)}>
-          <Flex gap="2" wrap="wrap" align="center">
-            {task.task_type === "operation" ? (
-              <TextField.Root name="actual_quantity_delta" placeholder="Выпущено" size="2" required />
-            ) : null}
-            <Button size="2" color="green" type="submit" disabled={submitting}>
-              <Check size={15} /> Завершить
-            </Button>
-          </Flex>
-        </form>
+      ) : null}
+      {canBlock ? (
         <Button size="2" variant="soft" color="red" disabled={submitting} onClick={() => onTransition("blocked")}>
           <Pause size={15} /> Заблокировать
         </Button>
-      </Flex>
-    );
-  }
-
-  return null;
+      ) : null}
+    </Flex>
+  );
 }
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
@@ -216,22 +196,6 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
       </Text>
     </Box>
   );
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatQuantity(value: string | number) {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) return String(value);
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 6 }).format(numeric);
 }
 
 function asOptionalString(value: FormDataEntryValue | null) {

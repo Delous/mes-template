@@ -1,8 +1,8 @@
 import { Badge } from "@radix-ui/themes";
 
-import type { TaskStatus, TaskType } from "@/types/api";
+import type { TaskStatus, TaskType, TaskUpdateStatus } from "@/types/api";
 
-const statusLabels: Record<TaskStatus, string> = {
+const statusLabels: Record<TaskUpdateStatus, string> = {
   waiting: "Ожидает",
   to_do: "К выполнению",
   in_progress: "В работе",
@@ -19,7 +19,7 @@ const taskTypeLabels: Record<TaskType, string> = {
   transfer: "Перемещение",
 };
 
-const colors: Record<TaskStatus, React.ComponentProps<typeof Badge>["color"]> = {
+const colors: Record<TaskUpdateStatus, React.ComponentProps<typeof Badge>["color"]> = {
   waiting: "gray",
   to_do: "blue",
   in_progress: "amber",

@@ -2,14 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Box, Button, Callout, Flex, Grid, Heading, Spinner, Text, TextField } from "@radix-ui/themes";
-import { Plus, Save } from "lucide-react";
+import { Plus } from "lucide-react";
 
-import {
-  createAdminWorkstation,
-  getAdminWorkstations,
-  normalizeApiError,
-  updateAdminWorkstation,
-} from "@/lib/api";
+import { DeleteButton } from "@/components/page-tools";
+import { createAdminWorkstation, deleteAdminWorkstation, getAdminWorkstations, normalizeApiError } from "@/lib/api";
 import type { WorkstationDto } from "@/types/api";
 
 export default function WorkstationsPage() {
@@ -35,16 +31,11 @@ export default function WorkstationsPage() {
     void loadWorkstations();
   }, [loadWorkstations]);
 
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function run(action: () => Promise<unknown>) {
     setSubmitting(true);
     setError(null);
-
-    const formData = new FormData(event.currentTarget);
-
     try {
-      await createAdminWorkstation({ name: String(formData.get("name") ?? "").trim() });
-      event.currentTarget.reset();
+      await action();
       await loadWorkstations();
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
@@ -53,21 +44,13 @@ export default function WorkstationsPage() {
     }
   }
 
-  async function handleUpdate(id: number, event: FormEvent<HTMLFormElement>) {
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
     const formData = new FormData(event.currentTarget);
-
-    try {
-      await updateAdminWorkstation(id, { name: String(formData.get("name") ?? "").trim() });
-      await loadWorkstations();
-    } catch (caughtError) {
-      setError(normalizeApiError(caughtError));
-    } finally {
-      setSubmitting(false);
-    }
+    await run(async () => {
+      await createAdminWorkstation({ name: String(formData.get("name") ?? "").trim() });
+      event.currentTarget.reset();
+    });
   }
 
   return (
@@ -76,7 +59,7 @@ export default function WorkstationsPage() {
         Рабочие посты
       </Heading>
       <Text as="p" color="gray" size="2" mb="5">
-        Список постов для назначения пользователям.
+        Backend поддерживает создание и удаление рабочих постов. Переименование endpoint не предусмотрено.
       </Text>
 
       {error ? (
@@ -90,7 +73,7 @@ export default function WorkstationsPage() {
           <Grid columns={{ initial: "1", md: "3" }} gap="3" align="end">
             <label>
               <Text size="2">Название</Text>
-              <TextField.Root name="name" mt="2" required maxLength={128} />
+              <TextField.Root name="name" mt="2" required maxLength={256} />
             </label>
             <Button type="submit" disabled={submitting}>
               <Plus size={16} /> Создать
@@ -108,17 +91,21 @@ export default function WorkstationsPage() {
         <Grid columns={{ initial: "1", md: "2" }} gap="4">
           {workstations.map((workstation) => (
             <Box key={workstation.id} className="surface" p="4">
-              <form onSubmit={(event) => handleUpdate(workstation.id, event)}>
-                <Flex gap="3" align="end" wrap="wrap">
-                  <label className="grow-field">
-                    <Text size="2">Название</Text>
-                    <TextField.Root name="name" mt="2" defaultValue={workstation.name} required maxLength={128} />
-                  </label>
-                  <Button type="submit" variant="soft" disabled={submitting}>
-                    <Save size={15} /> Сохранить
-                  </Button>
-                </Flex>
-              </form>
+              <Flex align="center" justify="between" gap="3" wrap="wrap">
+                <Box>
+                  <Text size="1" color="gray">
+                    ID {workstation.id}
+                  </Text>
+                  <Text as="p" weight="medium">
+                    {workstation.name}
+                  </Text>
+                </Box>
+                <DeleteButton
+                  disabled={submitting}
+                  confirmText={`Удалить рабочий пост "${workstation.name}"?`}
+                  onDelete={() => void run(() => deleteAdminWorkstation(workstation.id))}
+                />
+              </Flex>
             </Box>
           ))}
           {workstations.length === 0 ? (

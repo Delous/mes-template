@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Badge, Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
-import { ClipboardList, LogOut, PackageCheck, Users, Wrench } from "lucide-react";
+import { ClipboardList, Database, Gauge, LogOut, PackageCheck, ShoppingCart, Users, Wrench } from "lucide-react";
 
 import { useAuth } from "./auth-context";
 import { PushNotificationStatus } from "./push-notification-status";
@@ -14,12 +14,16 @@ type NavigationItem = {
   label: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
+  activePrefix?: string;
 };
 
 const navigation: NavigationItem[] = [
   { href: "/tasks", label: "Задачи", icon: <ClipboardList size={18} /> },
+  { href: "/orders", label: "Заказы", icon: <ShoppingCart size={18} /> },
+  { href: "/catalogs/units", label: "Справочники", icon: <Database size={18} />, activePrefix: "/catalogs" },
   { href: "/admin/users", label: "Пользователи", icon: <Users size={18} />, adminOnly: true },
   { href: "/admin/workstations", label: "Рабочие посты", icon: <Wrench size={18} />, adminOnly: true },
+  { href: "/admin/values", label: "Данные датчиков", icon: <Gauge size={18} />, adminOnly: true },
 ];
 
 const roleLabels = {
@@ -65,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`nav-link ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? "active" : ""}`}
+                className={`nav-link ${isActive(pathname, item) ? "active" : ""}`}
               >
                 {item.icon}
                 <Text size="2" weight="medium">
@@ -105,4 +109,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
     </div>
   );
+}
+
+function isActive(pathname: string, item: NavigationItem) {
+  const prefix = item.activePrefix ?? item.href;
+  return pathname === item.href || pathname.startsWith(`${prefix}/`) || pathname === prefix;
 }
