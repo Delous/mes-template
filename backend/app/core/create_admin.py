@@ -15,7 +15,7 @@ password_hash = PasswordHash.recommended()
 async def main():
     username = os.getenv("ADMIN_USERNAME", "admin")
     password = os.getenv("ADMIN_PASSWORD")
-    full_name = os.getenv("ADMIN_FULL_NAME", "Administrator")
+    full_name = os.getenv("ADMIN_FULL_NAME", "Администратор")
 
     if not password:
         print("ADMIN_PASSWORD is required", file=sys.stderr)

@@ -26,14 +26,14 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_TTL_MINUTES: int = 10
-    REFRESH_TOKEN_TTL_DAYS: int = 6
+    REFRESH_TOKEN_TTL_DAYS: int = 7
 
     ACCESS_COOKIE_NAME: str = "access_token"
     REFRESH_COOKIE_NAME: str = "refresh_token"
 
     AUTH_COOKIE_SECURE: bool = True
-    AUTH_COOKIE_SAMESITE: Literal['lax', 'strict', 'none'] = "lax"
+    AUTH_COOKIE_SAMESITE: Literal['lax', 'strict', 'none'] = "strict"
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings() # pyright: ignore[reportCallIssue]
+    return Settings()

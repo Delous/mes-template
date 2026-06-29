@@ -27,10 +27,9 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 };
 
 const useMockApi = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "https://arm.delous.ru").replace(/\/+$/, "");
 
 export const apiClient = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: "",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
