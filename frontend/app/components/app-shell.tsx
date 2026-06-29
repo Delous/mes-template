@@ -7,7 +7,6 @@ import { Badge, Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users, Wrench } from "lucide-react";
 
 import { useAuth } from "./auth-context";
-import { PushNotificationStatus } from "./push-notification-status";
 
 type NavigationItem = {
   href: string;
@@ -79,7 +78,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Flex>
 
           <Flex direction="column" gap="3" className="sidebar-footer">
-            <PushNotificationStatus />
             <Flex direction="column" gap="1">
               <Text size="2" weight="medium">
                 {user?.full_name}
@@ -98,7 +96,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="mobile-header">
           <Text weight="bold">{pageTitle}</Text>
           <Flex align="center" gap="2">
-            <PushNotificationStatus />
             <Button type="button" size="1" variant="soft" color="gray" onClick={handleLogout}>
               <LogOut size={14} />
             </Button>
