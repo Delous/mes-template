@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.catalogs.common.service import (
     apply_fields,
+    ensure_unique_name,
     ensure_update_payload,
     flush_or_conflict,
 )
@@ -50,6 +51,7 @@ async def create_workstation(
     session: AsyncSession,
     payload: WorkstationCreate,
 ) -> Workstation:
+    await ensure_unique_name(session, Workstation, payload.name, "Workstation")
     workstation = Workstation(**payload.model_dump())
     session.add(workstation)
     await flush_or_conflict(session)
@@ -64,6 +66,14 @@ async def update_workstation(
     data = payload.model_dump(exclude_unset=True)
     ensure_update_payload(data)
     workstation = await get_workstation_by_id(session, workstation_id)
+    if "name" in data:
+        await ensure_unique_name(
+            session,
+            Workstation,
+            data["name"],
+            "Workstation",
+            workstation_id,
+        )
     apply_fields(workstation, data)
     await flush_or_conflict(session)
     return workstation

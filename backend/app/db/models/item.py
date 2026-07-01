@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from app.db.models.task import Task
     from app.db.models.unit import Unit
 
-from sqlalchemy import BigInteger, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -21,7 +21,7 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "items"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     unit_id: Mapped[int] = mapped_column(
         ForeignKey("units.id"),
         nullable=False,
@@ -49,8 +49,4 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
 
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="item",
-    )
-
-    __table_args__ = (
-        Index("ix_items_name", "name"),
     )

@@ -87,9 +87,9 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['unit_id'], ['units.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
-    op.create_index('ix_items_name', 'items', ['name'], unique=False)
     op.create_table('sensor_values',
     sa.Column('ts', sa.DateTime(timezone=True), nullable=False),
     sa.Column('value', sa.Integer(), nullable=False),
@@ -237,7 +237,6 @@ def downgrade() -> None:
     op.drop_index('ix_sensor_values_ts', table_name='sensor_values')
     op.drop_index('ix_sensor_values_sensor_id', table_name='sensor_values')
     op.drop_table('sensor_values')
-    op.drop_index('ix_items_name', table_name='items')
     op.drop_table('items')
     op.drop_table('operation_types')
     op.drop_table('workstations')

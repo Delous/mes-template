@@ -6,6 +6,7 @@ from app.catalogs.common.repository import list_entities
 from app.catalogs.common.service import (
     apply_fields,
     ensure_update_payload,
+    ensure_unique_name,
     flush_or_conflict,
     get_active_or_404,
     soft_delete_entity,
@@ -28,6 +29,7 @@ async def get_unit_by_id(session: AsyncSession, unit_id: int) -> Unit:
 
 
 async def create_unit(session: AsyncSession, payload: UnitCreate) -> Unit:
+    await ensure_unique_name(session, Unit, payload.name, "Unit")
     unit = Unit(**payload.model_dump())
     session.add(unit)
     await flush_or_conflict(session)
@@ -42,6 +44,8 @@ async def update_unit(
     data = payload.model_dump(exclude_unset=True)
     ensure_update_payload(data)
     unit = await get_unit_by_id(session, unit_id)
+    if "name" in data:
+        await ensure_unique_name(session, Unit, data["name"], "Unit", unit_id)
     apply_fields(unit, data)
     await flush_or_conflict(session)
     return unit

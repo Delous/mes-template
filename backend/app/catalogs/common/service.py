@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,6 +51,25 @@ async def ensure_active_exists(
     name: str,
 ) -> None:
     await get_active_or_404(session, model, obj_id, name)
+
+
+async def ensure_unique_name(
+    session: AsyncSession,
+    model: type[Any],
+    value: str,
+    entity_name: str,
+    exclude_id: int | None = None,
+) -> None:
+    query = select(model.id).where(model.name == value)
+    if exclude_id is not None:
+        query = query.where(model.id != exclude_id)
+
+    result = await session.execute(query.limit(1))
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{entity_name} name already exists",
+        )
 
 
 async def soft_delete_entity(

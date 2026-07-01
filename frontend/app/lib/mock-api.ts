@@ -279,6 +279,11 @@ function rebuildItemRelations() {
   }));
 }
 
+function ensureUniqueCatalogName<R extends CatalogResource>(resource: R, name: string, excludeId?: number) {
+  const duplicate = getCatalogStore(resource).some((item) => item.name === name && item.id !== excludeId);
+  if (duplicate) throw new Error("Название справочника уже используется.");
+}
+
 function buildCatalogItem<R extends CatalogResource>(resource: R, payload: CatalogPayloadMap[R] & { id?: number }): CatalogDtoMap[R] {
   const timestamp = currentIso();
   const base = {
@@ -514,6 +519,7 @@ export async function getCatalogItem<R extends CatalogResource>(resource: R, id:
 }
 
 export async function createCatalogItem<R extends CatalogResource>(resource: R, payload: CatalogPayloadMap[R]) {
+  ensureUniqueCatalogName(resource, payload.name);
   const created = buildCatalogItem(resource, payload);
   setCatalogStore(resource, [created, ...getCatalogStore(resource)] as CatalogDtoMap[R][]);
   return delay(created);
@@ -523,6 +529,7 @@ export async function updateCatalogItem<R extends CatalogResource>(resource: R, 
   const store = getCatalogStore(resource);
   const index = store.findIndex((item) => item.id === id && !isDeleted(item));
   if (index < 0) throw new Error("Запись справочника не найдена.");
+  if (payload.name !== undefined) ensureUniqueCatalogName(resource, payload.name, id);
   const updated = buildCatalogItem(resource, { ...store[index], ...payload, id } as CatalogPayloadMap[R] & { id: number });
   store[index] = updated;
   setCatalogStore(resource, store);

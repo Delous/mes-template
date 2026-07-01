@@ -12,6 +12,7 @@ from app.catalogs.common.repository import list_entities
 from app.catalogs.common.service import (
     apply_fields,
     ensure_active_exists,
+    ensure_unique_name,
     ensure_update_payload,
     flush_or_conflict,
     get_active_or_404,
@@ -64,6 +65,7 @@ async def get_item_by_id(session: AsyncSession, item_id: int) -> Item:
 
 async def create_item(session: AsyncSession, payload: ItemCreate) -> Item:
     await ensure_active_exists(session, Unit, payload.unit_id, "Unit")
+    await ensure_unique_name(session, Item, payload.name, "Item")
     item = Item(**payload.model_dump())
     session.add(item)
     await flush_or_conflict(session)
@@ -77,10 +79,12 @@ async def update_item(
 ) -> Item:
     data = payload.model_dump(exclude_unset=True)
     ensure_update_payload(data)
+    item = await get_item_by_id(session, item_id)
     if "unit_id" in data:
         await ensure_active_exists(session, Unit, data["unit_id"], "Unit")
+    if "name" in data:
+        await ensure_unique_name(session, Item, data["name"], "Item", item_id)
 
-    item = await get_item_by_id(session, item_id)
     apply_fields(item, data)
     await flush_or_conflict(session)
     return await get_item_by_id(session, item.id)
