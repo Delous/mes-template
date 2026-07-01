@@ -293,19 +293,21 @@ export default function ItemsPage() {
                 <Flex mt="4" gap="3" wrap="wrap">
                   <Button
                     type="button"
-                    variant="soft"
                     disabled={submitting || !canSaveItem(itemDraft)}
                     onClick={saveItem}
                   >
                     <Save size={15} /> Сохранить номенклатуру
                   </Button>
-                  <Button
-                    type="button"
-                    disabled={!editorItem || submitting || operationTypes.length === 0 || workstations.length === 0}
-                    onClick={startSpecification}
-                  >
-                    <Plus size={15} /> {editorItem?.resource_specification || specDraft ? "Редактировать ресурсную спецификацию" : "Добавить ресурсную спецификацию"}
-                  </Button>
+                  {editorItem && !editorItem.resource_specification && !specDraft ? (
+                    <Button
+                      type="button"
+                      variant="soft"
+                      disabled={submitting || operationTypes.length === 0 || workstations.length === 0}
+                      onClick={startSpecification}
+                    >
+                      <Plus size={15} /> Добавить ресурсную спецификацию
+                    </Button>
+                  ) : null}
                 </Flex>
               </Box>
 
@@ -390,7 +392,7 @@ export default function ItemsPage() {
                     >
                       <Plus size={15} /> Добавить материал
                     </Button>
-                    <Flex justify="end">
+                    <Flex>
                       <Button type="button" disabled={submitting || !canSaveSpecification(specDraft)} onClick={saveSpecification}>
                         <Save size={15} /> Сохранить спецификацию
                       </Button>
