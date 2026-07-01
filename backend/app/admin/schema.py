@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-UserRole = Literal["operator", "reviewer", "storekeeper"]
+UserRole = Literal["operator", "reviewer"]
 
 
 class WorkstationResponse(BaseModel):

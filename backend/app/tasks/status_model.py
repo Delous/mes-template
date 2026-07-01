@@ -2,7 +2,6 @@ USER_ROLES = {
     "admin",
     "operator",
     "reviewer",
-    "storekeeper",
 }
 
 TASK_TYPES = {
@@ -26,6 +25,11 @@ LOGISTICS_TASK_TYPES = {
     "transfer",
 }
 
+OPERATOR_TASK_TYPES = {
+    "operation",
+    *LOGISTICS_TASK_TYPES,
+}
+
 TransitionRuleType = dict[str, set[str]]
 StatusTransitionsType = dict[str, TransitionRuleType]
 TaskStatusFlowType = dict[str, StatusTransitionsType]
@@ -42,10 +46,10 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
     },
     "to_do": {
         "in_progress": {
-            "roles": {"operator", "reviewer", "storekeeper"},
+            "roles": {"operator", "reviewer"},
         },
         "done": {
-            "roles": {"reviewer", "storekeeper"},
+            "roles": {"operator", "reviewer"},
         },
         "cancelled": {
             "roles": {"admin"},
@@ -53,15 +57,15 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
     },
     "in_progress": {
         "blocked": {
-            "roles": {"operator", "storekeeper", "admin"},
+            "roles": {"operator", "admin"},
         },
         "done": {
-            "roles": {"operator", "reviewer", "storekeeper"},
+            "roles": {"operator", "reviewer"},
         },
     },
     "blocked": {
         "in_progress": {
-            "roles": {"operator", "storekeeper", "admin"},
+            "roles": {"operator", "admin"},
         },
         "cancelled": {
             "roles": {"admin"},

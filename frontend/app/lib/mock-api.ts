@@ -157,13 +157,6 @@ let users: AdminUserDto[] = [
     role: "reviewer",
     workstations: [workstations[2]],
   },
-  {
-    id: 4,
-    username: "storekeeper",
-    full_name: "Кладовщик",
-    role: "storekeeper",
-    workstations: [workstations[1]],
-  },
 ];
 
 let orders: OrderDto[] = [

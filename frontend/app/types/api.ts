@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "operator" | "reviewer" | "storekeeper";
+export type UserRole = "admin" | "operator" | "reviewer";
 export type EditableUserRole = Exclude<UserRole, "admin">;
 
 export type ListResponse<T> = {

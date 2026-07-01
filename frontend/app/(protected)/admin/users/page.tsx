@@ -11,10 +11,9 @@ const roleLabels: Record<UserRole, string> = {
   admin: "Администратор",
   operator: "Оператор",
   reviewer: "ОТК",
-  storekeeper: "Кладовщик",
 };
 
-const editableRoles: EditableUserRole[] = ["operator", "reviewer", "storekeeper"];
+const editableRoles: EditableUserRole[] = ["operator", "reviewer"];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserDto[]>([]);

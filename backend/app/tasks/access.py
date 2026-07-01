@@ -5,7 +5,7 @@ from sqlalchemy import and_, case, false, or_, true
 from app.core.schema import UserPublic
 from app.db.models.task import Task
 from app.tasks.schema import UpdateTaskRequest
-from app.tasks.status_model import LOGISTICS_TASK_TYPES, TASK_STATUS_FLOW
+from app.tasks.status_model import OPERATOR_TASK_TYPES, TASK_STATUS_FLOW
 
 
 VISIBLE_ACTIVE_STATUSES = {"to_do", "in_progress", "blocked"}
@@ -15,15 +15,9 @@ def visible_task_filter(user: UserPublic):
     if user.role == "admin":
         return true()
 
-    if user.role == "storekeeper":
-        return and_(
-            Task.task_type.in_(LOGISTICS_TASK_TYPES),
-            Task.status.in_(VISIBLE_ACTIVE_STATUSES),
-        )
-
     if user.role == "operator":
         return and_(
-            Task.task_type == "operation",
+            Task.task_type.in_(OPERATOR_TASK_TYPES),
             Task.workstation_id.in_(user.workstation_ids),
             or_(
                 and_(
@@ -53,11 +47,8 @@ def can_view_task(user: UserPublic, task: Task) -> bool:
     if task.status not in VISIBLE_ACTIVE_STATUSES:
         return False
 
-    if user.role == "storekeeper":
-        return task.task_type in LOGISTICS_TASK_TYPES
-
     if user.role == "operator":
-        if task.task_type != "operation":
+        if task.task_type not in OPERATOR_TASK_TYPES:
             return False
         if task.workstation_id not in user.workstation_ids:
             return False
@@ -96,11 +87,11 @@ def validate_update_task_status(
             detail=f"Transition from {task.status} to {new_status} is forbidden",
         )
 
-    if user.role == "storekeeper" and task.task_type not in LOGISTICS_TASK_TYPES:
-        raise HTTPException(status_code=403, detail="Task update is forbidden")
-
     if user.role == "operator":
-        if task.task_type != "operation" or task.workstation_id not in user.workstation_ids:
+        if (
+            task.task_type not in OPERATOR_TASK_TYPES
+            or task.workstation_id not in user.workstation_ids
+        ):
             raise HTTPException(status_code=403, detail="Task update is forbidden")
 
     if user.role == "reviewer" and task.task_type != "quality_review":

@@ -27,7 +27,6 @@ const roleLabels = {
   admin: "Администратор",
   operator: "Оператор",
   reviewer: "ОТК",
-  storekeeper: "Кладовщик",
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {

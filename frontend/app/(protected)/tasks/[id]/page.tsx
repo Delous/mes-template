@@ -128,14 +128,14 @@ function TaskActions({
   submitting: boolean;
   onTransition: (status: TaskUpdateStatus, event?: FormEvent<HTMLFormElement>) => void;
 }) {
-  const canStart = task.status === "to_do" && ["operator", "reviewer", "storekeeper"].includes(role ?? "");
-  const canResume = task.status === "blocked" && ["admin", "operator", "storekeeper"].includes(role ?? "");
-  const canBlock = task.status === "in_progress" && ["admin", "operator", "storekeeper"].includes(role ?? "");
+  const canStart = task.status === "to_do" && ["operator", "reviewer"].includes(role ?? "");
+  const canResume = task.status === "blocked" && ["admin", "operator"].includes(role ?? "");
+  const canBlock = task.status === "in_progress" && ["admin", "operator"].includes(role ?? "");
   const canCompleteOperation = task.status === "in_progress" && task.task_type === "operation" && role === "operator";
   const canCompleteSimple =
     task.status === "in_progress" &&
     task.task_type !== "operation" &&
-    (role === "reviewer" || role === "storekeeper" || role === "admin");
+    (role === "operator" || role === "reviewer" || role === "admin");
   const canReject = ["to_do", "in_progress"].includes(task.status) && task.task_type === "quality_review" && role === "reviewer";
 
   return (
