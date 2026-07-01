@@ -146,8 +146,8 @@ async def create_tasks_for_order_line(
                 order_line_id=line.id,
                 route_operation_id=operation.id,
                 item_id=operation_input.item_id,
-                work_center_id=operation.work_center_id,
-                target_work_center_id=operation.work_center_id,
+                workstation_id=operation.workstation_id,
+                target_workstation_id=operation.workstation_id,
             )
             session.add(delivery_task)
             await session.flush()
@@ -166,7 +166,7 @@ async def create_tasks_for_order_line(
             order_line_id=line.id,
             route_operation_id=operation.id,
             item_id=output_item_id(operation, line.item_id),
-            work_center_id=operation.work_center_id,
+            workstation_id=operation.workstation_id,
         )
         session.add(operation_task)
         await session.flush()
@@ -188,7 +188,7 @@ async def create_tasks_for_order_line(
                 order_line_id=line.id,
                 route_operation_id=operation.id,
                 item_id=operation_task.item_id,
-                work_center_id=operation.work_center_id,
+                workstation_id=operation.workstation_id,
             )
             session.add(quality_task)
             await session.flush()
@@ -198,7 +198,7 @@ async def create_tasks_for_order_line(
         next_operation = operations[index + 1] if index + 1 < len(operations) else None
         if (
             next_operation is not None
-            and operation.work_center_id != next_operation.work_center_id
+            and operation.workstation_id != next_operation.workstation_id
         ):
             transfer_task = Task(
                 task_type="transfer",
@@ -214,9 +214,9 @@ async def create_tasks_for_order_line(
                 order_line_id=line.id,
                 route_operation_id=next_operation.id,
                 item_id=operation_task.item_id,
-                work_center_id=next_operation.work_center_id,
-                source_work_center_id=operation.work_center_id,
-                target_work_center_id=next_operation.work_center_id,
+                workstation_id=next_operation.workstation_id,
+                source_workstation_id=operation.workstation_id,
+                target_workstation_id=next_operation.workstation_id,
             )
             session.add(transfer_task)
             await session.flush()

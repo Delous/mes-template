@@ -26,10 +26,6 @@ export type WorkstationDto = {
   name: string;
 };
 
-export type CreateWorkstationPayload = {
-  name: string;
-};
-
 export type AdminUserDto = {
   id: number;
   username: string;
@@ -84,11 +80,9 @@ export type UnitSummary = {
   symbol: string;
 };
 
-export type WorkCenterSummary = {
+export type WorkstationSummary = {
   id: number;
   name: string;
-  type: string;
-  description: string | null;
 };
 
 export type ItemDto = BaseCatalogDto & {
@@ -105,18 +99,22 @@ export type ItemPayload = {
 
 export type ItemUpdatePayload = Partial<ItemPayload>;
 
-export type WorkCenterDto = BaseCatalogDto & {
-  type: "production" | "warehouse" | "quality" | string;
-  description: string | null;
-};
-
-export type WorkCenterPayload = {
+export type OperationTypeDto = {
+  id: number;
   name: string;
-  type: string;
-  description?: string | null;
 };
 
-export type WorkCenterUpdatePayload = Partial<WorkCenterPayload>;
+export type WorkstationPayload = {
+  name: string;
+};
+
+export type WorkstationUpdatePayload = Partial<WorkstationPayload>;
+
+export type OperationTypePayload = {
+  name: string;
+};
+
+export type OperationTypeUpdatePayload = Partial<OperationTypePayload>;
 
 export type BomLinePayload = {
   component_item_id: number;
@@ -164,7 +162,7 @@ export type RouteIoDto = RouteIoPayload & {
 export type RouteOperationPayload = {
   operation_number: number;
   name: string;
-  work_center_id: number;
+  workstation_id: number;
   setup_time_minutes: number;
   run_time_minutes: number;
   requires_quality_review: boolean;
@@ -174,7 +172,7 @@ export type RouteOperationPayload = {
 
 export type RouteOperationDto = RouteOperationPayload & {
   id: number;
-  work_center: WorkCenterSummary;
+  workstation: WorkstationSummary;
   inputs: RouteIoDto[];
   outputs: RouteIoDto[];
 };
@@ -201,12 +199,13 @@ export type RouteUpdatePayload = Partial<Omit<RoutePayload, "operations">> & {
   operations?: RouteOperationPayload[];
 };
 
-export type CatalogResource = "units" | "items" | "work-centers" | "boms" | "routes";
+export type CatalogResource = "units" | "items" | "workstations" | "operation-types" | "boms" | "routes";
 
 export type CatalogDtoMap = {
   units: UnitDto;
   items: ItemDto;
-  "work-centers": WorkCenterDto;
+  workstations: WorkstationDto;
+  "operation-types": OperationTypeDto;
   boms: BomDto;
   routes: RouteDto;
 };
@@ -214,7 +213,8 @@ export type CatalogDtoMap = {
 export type CatalogPayloadMap = {
   units: UnitPayload;
   items: ItemPayload;
-  "work-centers": WorkCenterPayload;
+  workstations: WorkstationPayload;
+  "operation-types": OperationTypePayload;
   boms: BomPayload;
   routes: RoutePayload;
 };
@@ -222,7 +222,8 @@ export type CatalogPayloadMap = {
 export type CatalogUpdatePayloadMap = {
   units: UnitUpdatePayload;
   items: ItemUpdatePayload;
-  "work-centers": WorkCenterUpdatePayload;
+  workstations: WorkstationUpdatePayload;
+  "operation-types": OperationTypeUpdatePayload;
   boms: BomUpdatePayload;
   routes: RouteUpdatePayload;
 };
@@ -260,10 +261,9 @@ export type TaskType = "warehouse_delivery" | "operation" | "quality_review" | "
 export type TaskStatus = "waiting" | "to_do" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskUpdateStatus = TaskStatus | "rejected";
 
-export type TaskWorkCenterDto = {
+export type TaskWorkstationDto = {
   id: number;
   name: string;
-  type: string;
 };
 
 export type TaskDto = {
@@ -278,17 +278,17 @@ export type TaskDto = {
   order_line_id: number;
   item_id: number;
   route_operation_id: number | null;
-  work_center_id: number | null;
-  source_work_center_id: number | null;
-  target_work_center_id: number | null;
+  workstation_id: number | null;
+  source_workstation_id: number | null;
+  target_workstation_id: number | null;
   item: {
     id: number;
     name: string;
     unit_id: number;
   };
-  work_center: TaskWorkCenterDto | null;
-  source_work_center: TaskWorkCenterDto | null;
-  target_work_center: TaskWorkCenterDto | null;
+  workstation: TaskWorkstationDto | null;
+  source_workstation: TaskWorkstationDto | null;
+  target_workstation: TaskWorkstationDto | null;
   executor_id: number | null;
   created_at: string;
   updated_at: string;

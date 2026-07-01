@@ -21,9 +21,9 @@ from app.tasks.schema import UpdateTaskRequest
 def task_options():
     return [
         selectinload(Task.item),
-        selectinload(Task.work_center),
-        selectinload(Task.source_work_center),
-        selectinload(Task.target_work_center),
+        selectinload(Task.workstation),
+        selectinload(Task.source_workstation),
+        selectinload(Task.target_workstation),
     ]
 
 

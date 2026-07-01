@@ -7,7 +7,7 @@ import { Plus, Save, Trash2 } from "lucide-react";
 import { CatalogNav } from "@/components/catalog-nav";
 import { DeleteButton, EmptyState, ErrorNotice, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
 import { createCatalogItem, deleteCatalogItem, getCatalog, normalizeApiError, updateCatalogItem } from "@/lib/api";
-import type { CatalogStatus, ItemDto, RouteDto, RouteIoPayload, RouteOperationPayload, WorkCenterDto } from "@/types/api";
+import type { CatalogStatus, ItemDto, RouteDto, RouteIoPayload, RouteOperationPayload, WorkstationDto } from "@/types/api";
 
 const pageSize = 20;
 
@@ -21,7 +21,7 @@ type DraftOperation = Omit<RouteOperationPayload, "inputs" | "outputs"> & {
 export default function RoutesPage() {
   const [routes, setRoutes] = useState<RouteDto[]>([]);
   const [items, setItems] = useState<ItemDto[]>([]);
-  const [workCenters, setWorkCenters] = useState<WorkCenterDto[]>([]);
+  const [workstations, setWorkstations] = useState<WorkstationDto[]>([]);
   const [newOperations, setNewOperations] = useState<DraftOperation[]>([newOperation()]);
   const [editOperations, setEditOperations] = useState<Record<number, DraftOperation[]>>({});
   const [page, setPage] = useState(1);
@@ -38,12 +38,12 @@ export default function RoutesPage() {
       const [routeResponse, itemResponse, workCenterResponse] = await Promise.all([
         getCatalog("routes", page, pageSize, includeDeleted),
         getCatalog("items", 1, 100),
-        getCatalog("work-centers", 1, 100),
+        getCatalog("workstations", 1, 100),
       ]);
       setRoutes(routeResponse.items);
       setTotal(routeResponse.total);
       setItems(itemResponse.items);
-      setWorkCenters(workCenterResponse.items);
+      setWorkstations(workCenterResponse.items);
       setEditOperations(
         Object.fromEntries(
           routeResponse.items.map((route) => [
@@ -52,7 +52,7 @@ export default function RoutesPage() {
               key: Date.now() + operation.id,
               operation_number: operation.operation_number,
               name: operation.name,
-              work_center_id: operation.work_center_id,
+              workstation_id: operation.workstation_id,
               setup_time_minutes: operation.setup_time_minutes,
               run_time_minutes: operation.run_time_minutes,
               requires_quality_review: operation.requires_quality_review,
@@ -90,7 +90,7 @@ export default function RoutesPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     await run(async () => {
-      await createCatalogItem("routes", readRouteForm(formData, newOperations, items[0]?.id ?? 0, workCenters[0]?.id ?? 0));
+      await createCatalogItem("routes", readRouteForm(formData, newOperations, items[0]?.id ?? 0, workstations[0]?.id ?? 0));
       event.currentTarget.reset();
       setNewOperations([newOperation()]);
     });
@@ -99,7 +99,7 @@ export default function RoutesPage() {
   async function handleUpdate(route: RouteDto, event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    await run(() => updateCatalogItem("routes", route.id, readRouteForm(formData, editOperations[route.id] ?? [], items[0]?.id ?? 0, workCenters[0]?.id ?? 0)));
+    await run(() => updateCatalogItem("routes", route.id, readRouteForm(formData, editOperations[route.id] ?? [], items[0]?.id ?? 0, workstations[0]?.id ?? 0)));
   }
 
   return (
@@ -115,8 +115,8 @@ export default function RoutesPage() {
       <Box className="surface" p="4" mb="4">
         <form onSubmit={handleCreate}>
           <RouteBaseFields items={items} prefix="new" />
-          <OperationsEditor operations={newOperations} items={items} workCenters={workCenters} onChange={setNewOperations} />
-          <Button type="submit" mt="4" disabled={submitting || items.length === 0 || workCenters.length === 0}>
+          <OperationsEditor operations={newOperations} items={items} workstations={workstations} onChange={setNewOperations} />
+          <Button type="submit" mt="4" disabled={submitting || items.length === 0 || workstations.length === 0}>
             <Plus size={16} /> Создать маршрут
           </Button>
         </form>
@@ -145,7 +145,7 @@ export default function RoutesPage() {
                   <OperationsEditor
                     operations={editOperations[route.id] ?? []}
                     items={items}
-                    workCenters={workCenters}
+                    workstations={workstations}
                     disabled={Boolean(route.deleted_at)}
                     onChange={(operations) => setEditOperations((current) => ({ ...current, [route.id]: operations }))}
                   />
@@ -205,13 +205,13 @@ function RouteBaseFields({ items, prefix, route, disabled }: { items: ItemDto[];
 function OperationsEditor({
   operations,
   items,
-  workCenters,
+  workstations,
   disabled,
   onChange,
 }: {
   operations: DraftOperation[];
   items: ItemDto[];
-  workCenters: WorkCenterDto[];
+  workstations: WorkstationDto[];
   disabled?: boolean;
   onChange: (operations: DraftOperation[]) => void;
 }) {
@@ -241,9 +241,9 @@ function OperationsEditor({
               <TextField.Root value={operation.name} mt="2" disabled={disabled} onChange={(event) => patchOperation(operations, operation.key, { name: event.target.value }, onChange)} />
             </label>
             <label>
-              <Text size="2">Рабочий центр</Text>
-              <select value={operation.work_center_id || workCenters[0]?.id} disabled={disabled} onChange={(event) => patchOperation(operations, operation.key, { work_center_id: Number(event.target.value) }, onChange)}>
-                {workCenters.map((workCenter) => (
+              <Text size="2">Рабочий пост</Text>
+              <select value={operation.workstation_id || workstations[0]?.id} disabled={disabled} onChange={(event) => patchOperation(operations, operation.key, { workstation_id: Number(event.target.value) }, onChange)}>
+                {workstations.map((workCenter) => (
                   <option key={workCenter.id} value={workCenter.id}>
                     {workCenter.name}
                   </option>
@@ -322,7 +322,7 @@ function IoEditor({
   );
 }
 
-function readRouteForm(formData: FormData, operations: DraftOperation[], fallbackItemId: number, fallbackWorkCenterId: number) {
+function readRouteForm(formData: FormData, operations: DraftOperation[], fallbackItemId: number, fallbackWorkstationId: number) {
   const prefix = String([...formData.keys()].find((key) => key.endsWith("-name")) ?? "new-name").replace(/-name$/, "");
   return {
     item_id: Number(formData.get(`${prefix}-item_id`)),
@@ -333,7 +333,7 @@ function readRouteForm(formData: FormData, operations: DraftOperation[], fallbac
     operations: operations.map((operation) => ({
       operation_number: Number(operation.operation_number),
       name: operation.name.trim(),
-      work_center_id: Number(operation.work_center_id) || fallbackWorkCenterId,
+      workstation_id: Number(operation.workstation_id) || fallbackWorkstationId,
       setup_time_minutes: Number(operation.setup_time_minutes) || 0,
       run_time_minutes: Number(operation.run_time_minutes) || 0,
       requires_quality_review: operation.requires_quality_review,
@@ -348,7 +348,7 @@ function newOperation(): DraftOperation {
     key: Date.now() + Math.round(Math.random() * 1000),
     operation_number: 10,
     name: "",
-    work_center_id: 0,
+    workstation_id: 0,
     setup_time_minutes: 0,
     run_time_minutes: 0,
     requires_quality_review: true,

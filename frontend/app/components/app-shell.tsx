@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Badge, Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
-import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users, Wrench } from "lucide-react";
+import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users } from "lucide-react";
 
 import { useAuth } from "./auth-context";
 
@@ -21,7 +21,6 @@ const navigation: NavigationItem[] = [
   { href: "/orders", label: "Заказы", icon: <ShoppingCart size={18} /> },
   { href: "/catalogs/units", label: "Справочники", icon: <Database size={18} />, activePrefix: "/catalogs" },
   { href: "/admin/users", label: "Пользователи", icon: <Users size={18} />, adminOnly: true },
-  { href: "/admin/workstations", label: "Рабочие посты", icon: <Wrench size={18} />, adminOnly: true },
 ];
 
 const roleLabels = {

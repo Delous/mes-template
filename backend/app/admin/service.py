@@ -3,14 +3,13 @@ from __future__ import annotations
 import re
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, func, insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.admin.schema import CreateUserRequest, CreateWorkstationRequest, UpdateUserRequest
+from app.admin.schema import CreateUserRequest, UpdateUserRequest
 from app.auth.service import password_hash
 from app.core.schema import UserPublic
-from app.db.models.task import Task
 from app.db.models.user import User
 from app.db.models.user_workstation import UserWorkstation
 from app.db.models.workstation import Workstation
@@ -260,53 +259,7 @@ async def workstation_list(
 ) -> list[Workstation]:
     require_admin(current_user)
 
-    result = await session.execute(select(Workstation).order_by(Workstation.id.asc()))
+    result = await session.execute(
+        select(Workstation).order_by(Workstation.id.asc())
+    )
     return list(result.scalars().all())
-
-
-async def create_workstation(
-    session: AsyncSession,
-    current_user: UserPublic,
-    payload: CreateWorkstationRequest,
-) -> Workstation:
-    require_admin(current_user)
-
-    result = await session.execute(
-        select(Workstation).where(Workstation.name == payload.name)
-    )
-    existing_workstation = result.scalar_one_or_none()
-    if existing_workstation is not None:
-        raise HTTPException(status_code=409, detail="Workstation already exists")
-
-    result = await session.execute(
-        insert(Workstation)
-        .values(name=payload.name, type="workstation")
-        .returning(Workstation)
-    )
-    return result.scalar_one()
-
-
-async def delete_workstation(
-    session: AsyncSession,
-    current_user: UserPublic,
-    workstation_id: int,
-) -> None:
-    require_admin(current_user)
-
-    result = await session.execute(
-        select(Workstation).where(Workstation.id == workstation_id)
-    )
-    workstation = result.scalar_one_or_none()
-    if workstation is None:
-        raise HTTPException(status_code=404, detail="Workstation not found")
-
-    tasks_count_result = await session.execute(
-        select(func.count()).select_from(Task).where(Task.workstation_id == workstation_id)
-    )
-    if tasks_count_result.scalar_one() > 0:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete workstation with tasks",
-        )
-
-    await session.execute(delete(Workstation).where(Workstation.id == workstation_id))

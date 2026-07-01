@@ -7,7 +7,8 @@ import { Flex } from "@radix-ui/themes";
 const links = [
   { href: "/catalogs/units", label: "Единицы" },
   { href: "/catalogs/items", label: "Номенклатура" },
-  { href: "/catalogs/work-centers", label: "Рабочие центры" },
+  { href: "/catalogs/workstations", label: "Рабочие посты" },
+  { href: "/catalogs/operation-types", label: "Типы операций" },
   { href: "/catalogs/boms", label: "BOM" },
   { href: "/catalogs/routes", label: "Маршруты" },
 ];

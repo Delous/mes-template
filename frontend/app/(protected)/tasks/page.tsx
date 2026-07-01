@@ -67,7 +67,7 @@ export default function TasksPage() {
                     <Detail label="Тип" value={<TaskTypeBadge type={task.task_type} />} />
                     <Detail label="Номенклатура" value={task.item.name} />
                     <Detail label="План" value={formatQuantity(task.planned_quantity)} />
-                    <Detail label="Рабочий центр" value={task.work_center?.name ?? "Не указан"} />
+                    <Detail label="Рабочий пост" value={task.workstation?.name ?? "Не указан"} />
                   </Grid>
 
                   <Button asChild variant="soft" color="gray">

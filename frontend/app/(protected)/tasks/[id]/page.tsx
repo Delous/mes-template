@@ -104,9 +104,9 @@ export default function TaskPage() {
 
             <Box className="surface" p="4">
               <Grid columns={{ initial: "1", sm: "2" }} gap="3">
-                <Detail label="Рабочий центр" value={task.work_center?.name ?? "Не указан"} />
-                <Detail label="Откуда" value={task.source_work_center?.name ?? "Не указано"} />
-                <Detail label="Куда" value={task.target_work_center?.name ?? "Не указано"} />
+                <Detail label="Рабочий пост" value={task.workstation?.name ?? "Не указан"} />
+                <Detail label="Откуда" value={task.source_workstation?.name ?? "Не указано"} />
+                <Detail label="Куда" value={task.target_workstation?.name ?? "Не указано"} />
                 <Detail label="Обновлено" value={formatDate(task.updated_at)} />
               </Grid>
             </Box>

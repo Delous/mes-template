@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from app.db.models.item import Item
     from app.db.models.order import OrderLine
     from app.db.models.task import Task
-    from app.db.models.work_center import WorkCenter
+    from app.db.models.workstation import Workstation
 
 from decimal import Decimal
 
@@ -72,8 +72,8 @@ class RouteOperation(Base):
     )
     operation_number: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    work_center_id: Mapped[int] = mapped_column(
-        ForeignKey("work_centers.id"),
+    workstation_id: Mapped[int] = mapped_column(
+        ForeignKey("workstations.id"),
         nullable=False,
     )
     setup_time_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -88,7 +88,7 @@ class RouteOperation(Base):
         back_populates="operations",
     )
 
-    work_center: Mapped["WorkCenter"] = relationship(
+    workstation: Mapped["Workstation"] = relationship(
         back_populates="route_operations",
     )
 
@@ -123,7 +123,7 @@ class RouteOperation(Base):
             name="ck_route_operations_run_time_minutes_non_negative",
         ),
         Index("ix_route_operations_route_id", "route_id"),
-        Index("ix_route_operations_work_center_id", "work_center_id"),
+        Index("ix_route_operations_workstation_id", "workstation_id"),
     )
 
 

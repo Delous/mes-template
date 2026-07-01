@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.admin import service as admin_service
 from app.admin.schema import (
     CreateUserRequest,
-    CreateWorkstationRequest,
     UpdateUserRequest,
     UserListResponse,
     UserResponse,
@@ -58,24 +57,3 @@ async def get_workstations(
 ):
     return await admin_service.workstation_list(session, user)
 
-
-@router.post(
-    "/workstations",
-    response_model=WorkstationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_workstation(
-    payload: CreateWorkstationRequest,
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    return await admin_service.create_workstation(session, user, payload)
-
-
-@router.delete("/workstations/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_workstation(
-    id: Annotated[int, Path()],
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    await admin_service.delete_workstation(session, user, id)

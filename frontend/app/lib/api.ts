@@ -9,7 +9,6 @@ import type {
   CatalogUpdatePayloadMap,
   CreateOrderPayload,
   CreateUserPayload,
-  CreateWorkstationPayload,
   ListResponse,
   LoginPayload,
   MeDto,
@@ -26,7 +25,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const useMockApi = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
+const useMockApi = true;
 
 export const apiClient = axios.create({
   baseURL: "",
@@ -220,15 +219,4 @@ export async function getAdminWorkstations() {
   if (useMockApi) return mockApi.getAdminWorkstations();
   const response = await apiClient.get<WorkstationDto[]>("/api/v1/admin/workstations");
   return response.data;
-}
-
-export async function createAdminWorkstation(payload: CreateWorkstationPayload) {
-  if (useMockApi) return mockApi.createAdminWorkstation(payload);
-  const response = await apiClient.post<WorkstationDto>("/api/v1/admin/workstations", payload);
-  return response.data;
-}
-
-export async function deleteAdminWorkstation(id: number) {
-  if (useMockApi) return mockApi.deleteAdminWorkstation(id);
-  await apiClient.delete(`/api/v1/admin/workstations/${id}`);
 }

@@ -7,12 +7,12 @@ if TYPE_CHECKING:
     from app.db.models.route import RouteOperation
     from app.db.models.task_history import TaskHistory
     from app.db.models.user import User
-    from app.db.models.work_center import WorkCenter
+    from app.db.models.workstation import Workstation
 
 from decimal import Decimal
 
 from sqlalchemy import BigInteger, ForeignKey, Index, Numeric, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.mixins import TimestampMixin
@@ -59,19 +59,18 @@ class Task(Base, TimestampMixin):
         nullable=True,
     )
 
-    work_center_id: Mapped[int | None] = mapped_column(
-        ForeignKey("work_centers.id"),
-        nullable=True,
-    )
-    workstation_id = synonym("work_center_id")
-
-    source_work_center_id: Mapped[int | None] = mapped_column(
-        ForeignKey("work_centers.id"),
+    workstation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workstations.id"),
         nullable=True,
     )
 
-    target_work_center_id: Mapped[int | None] = mapped_column(
-        ForeignKey("work_centers.id"),
+    source_workstation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workstations.id"),
+        nullable=True,
+    )
+
+    target_workstation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workstations.id"),
         nullable=True,
     )
 
@@ -96,17 +95,17 @@ class Task(Base, TimestampMixin):
         back_populates="tasks",
     )
 
-    work_center: Mapped["WorkCenter"] = relationship(
+    workstation: Mapped["Workstation"] = relationship(
         back_populates="tasks",
-        foreign_keys=[work_center_id],
+        foreign_keys=[workstation_id],
     )
 
-    source_work_center: Mapped["WorkCenter | None"] = relationship(
-        foreign_keys=[source_work_center_id],
+    source_workstation: Mapped["Workstation | None"] = relationship(
+        foreign_keys=[source_workstation_id],
     )
 
-    target_work_center: Mapped["WorkCenter | None"] = relationship(
-        foreign_keys=[target_work_center_id],
+    target_workstation: Mapped["Workstation | None"] = relationship(
+        foreign_keys=[target_workstation_id],
     )
 
     executor: Mapped["User | None"] = relationship(
@@ -139,7 +138,7 @@ class Task(Base, TimestampMixin):
         Index("ix_tasks_order_line_id", "order_line_id"),
         Index("ix_tasks_status", "status"),
         Index("ix_tasks_task_type", "task_type"),
-        Index("ix_tasks_work_center_id", "work_center_id"),
+        Index("ix_tasks_workstation_id", "workstation_id"),
     )
 
 

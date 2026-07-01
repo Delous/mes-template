@@ -8,12 +8,12 @@ import type {
   CatalogUpdatePayloadMap,
   CreateOrderPayload,
   CreateUserPayload,
-  CreateWorkstationPayload,
   ItemDto,
   ItemSummary,
   ListResponse,
   LoginPayload,
   MeDto,
+  OperationTypeDto,
   OrderDto,
   RouteDto,
   RouteIoPayload,
@@ -24,9 +24,8 @@ import type {
   UpdateUserPayload,
   UnitDto,
   UnitSummary,
-  WorkCenterDto,
-  WorkCenterSummary,
   WorkstationDto,
+  WorkstationSummary,
 } from "@/types/api";
 
 const now = "2026-06-15T10:00:00Z";
@@ -60,34 +59,15 @@ let items: ItemDto[] = [
   },
 ];
 
-let workCenters: WorkCenterDto[] = [
-  {
-    id: 1,
-    name: "Линия экструзии 1",
-    type: "production",
-    description: "Основной производственный пост",
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-  },
-  {
-    id: 2,
-    name: "Склад сырья",
-    type: "warehouse",
-    description: "Зона хранения сырья",
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-  },
-  {
-    id: 3,
-    name: "ОТК",
-    type: "quality",
-    description: "Контроль качества",
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-  },
+let workstations: WorkstationDto[] = [
+  { id: 1, name: "Пост экструзии" },
+  { id: 2, name: "Склад сырья" },
+  { id: 3, name: "ОТК" },
+];
+
+let operationTypes: OperationTypeDto[] = [
+  { id: 1, name: "Экструзия" },
+  { id: 2, name: "Маркировка" },
 ];
 
 let boms: BomDto[] = [
@@ -128,8 +108,8 @@ let routes: RouteDto[] = [
         id: 1,
         operation_number: 10,
         name: "Экструзия",
-        work_center_id: 1,
-        work_center: toWorkCenterSummary(workCenters[0]),
+        workstation_id: 1,
+        workstation: toWorkstationSummary(workstations[0]),
         setup_time_minutes: 15,
         run_time_minutes: 60,
         requires_quality_review: true,
@@ -140,8 +120,8 @@ let routes: RouteDto[] = [
         id: 2,
         operation_number: 20,
         name: "Маркировка",
-        work_center_id: 1,
-        work_center: toWorkCenterSummary(workCenters[0]),
+        workstation_id: 1,
+        workstation: toWorkstationSummary(workstations[0]),
         setup_time_minutes: 5,
         run_time_minutes: 20,
         requires_quality_review: false,
@@ -153,12 +133,6 @@ let routes: RouteDto[] = [
     updated_at: now,
     deleted_at: null,
   },
-];
-
-let workstations: WorkstationDto[] = [
-  { id: 1, name: "Пост экструзии" },
-  { id: 2, name: "Склад сырья" },
-  { id: 3, name: "ОТК" },
 ];
 
 let users: AdminUserDto[] = [
@@ -216,13 +190,13 @@ let tasks: TaskDto[] = [
     order_line_id: 1,
     item_id: 10,
     route_operation_id: 1,
-    work_center_id: 1,
-    source_work_center_id: null,
-    target_work_center_id: 1,
+    workstation_id: 1,
+    source_workstation_id: null,
+    target_workstation_id: 1,
     item: toTaskItem(items[0]),
-    work_center: toTaskWorkCenter(workCenters[0]),
-    source_work_center: null,
-    target_work_center: toTaskWorkCenter(workCenters[0]),
+    workstation: toTaskWorkstation(workstations[0]),
+    source_workstation: null,
+    target_workstation: toTaskWorkstation(workstations[0]),
     executor_id: null,
     created_at: now,
     updated_at: now,
@@ -239,13 +213,13 @@ let tasks: TaskDto[] = [
     order_line_id: 1,
     item_id: 100,
     route_operation_id: 1,
-    work_center_id: 1,
-    source_work_center_id: null,
-    target_work_center_id: null,
+    workstation_id: 1,
+    source_workstation_id: null,
+    target_workstation_id: null,
     item: toTaskItem(items[1]),
-    work_center: toTaskWorkCenter(workCenters[0]),
-    source_work_center: null,
-    target_work_center: null,
+    workstation: toTaskWorkstation(workstations[0]),
+    source_workstation: null,
+    target_workstation: null,
     executor_id: null,
     created_at: now,
     updated_at: now,
@@ -308,12 +282,12 @@ function toItemSummary(item: ItemDto): ItemSummary {
   return { id: item.id, name: item.name, unit_id: item.unit_id, description: item.description };
 }
 
-function toWorkCenterSummary(workCenter: WorkCenterDto): WorkCenterSummary {
-  return { id: workCenter.id, name: workCenter.name, type: workCenter.type, description: workCenter.description };
+function toWorkstationSummary(workstation: WorkstationDto): WorkstationSummary {
+  return { id: workstation.id, name: workstation.name };
 }
 
-function toTaskWorkCenter(workCenter: WorkCenterDto) {
-  return { id: workCenter.id, name: workCenter.name, type: workCenter.type };
+function toTaskWorkstation(workstation: WorkstationDto) {
+  return { id: workstation.id, name: workstation.name };
 }
 
 function toTaskItem(item: ItemDto) {
@@ -333,10 +307,10 @@ function findActiveRoute(id: number) {
   return route;
 }
 
-function findActiveWorkCenter(id: number) {
-  const workCenter = workCenters.find((candidate) => candidate.id === id && !candidate.deleted_at);
-  if (!workCenter) throw new Error(`Рабочий центр не найден: ${id}`);
-  return workCenter;
+function findActiveWorkstation(id: number) {
+  const workstation = workstations.find((candidate) => candidate.id === id);
+  if (!workstation) throw new Error(`Рабочий пост не найден: ${id}`);
+  return workstation;
 }
 
 function rebuildItemRelations() {
@@ -373,13 +347,13 @@ function buildRouteIo(itemsPayload: RouteIoPayload[]) {
 
 function buildRouteOperations(operations: RouteOperationPayload[]) {
   return operations.map((operation, index) => {
-    const workCenter = findActiveWorkCenter(Number(operation.work_center_id));
+    const workCenter = findActiveWorkstation(Number(operation.workstation_id));
     return {
       id: index + 1,
       operation_number: Number(operation.operation_number),
       name: operation.name,
-      work_center_id: Number(operation.work_center_id),
-      work_center: toWorkCenterSummary(workCenter),
+      workstation_id: Number(operation.workstation_id),
+      workstation: toWorkstationSummary(workCenter),
       setup_time_minutes: Number(operation.setup_time_minutes) || 0,
       run_time_minutes: Number(operation.run_time_minutes) || 0,
       requires_quality_review: operation.requires_quality_review,
@@ -394,15 +368,20 @@ function decimal(value: string | number, digits = 6) {
   return Number.isFinite(numeric) ? numeric.toFixed(digits) : (0).toFixed(digits);
 }
 
-function activeFilter<T extends { deleted_at: string | null }>(itemsToFilter: T[], includeDeleted: boolean) {
-  return includeDeleted ? itemsToFilter : itemsToFilter.filter((item) => !item.deleted_at);
+function isDeleted(item: { id: number; deleted_at?: string | null }) {
+  return "deleted_at" in item && Boolean(item.deleted_at);
+}
+
+function activeFilter<T extends { id: number; deleted_at?: string | null }>(itemsToFilter: T[], includeDeleted: boolean) {
+  return includeDeleted ? itemsToFilter : itemsToFilter.filter((item) => !isDeleted(item));
 }
 
 function getCatalogStore<R extends CatalogResource>(resource: R): CatalogDtoMap[R][] {
   const stores = {
     units,
     items,
-    "work-centers": workCenters,
+    workstations,
+    "operation-types": operationTypes,
     boms,
     routes,
   } satisfies Record<CatalogResource, unknown[]>;
@@ -412,7 +391,8 @@ function getCatalogStore<R extends CatalogResource>(resource: R): CatalogDtoMap[
 function setCatalogStore<R extends CatalogResource>(resource: R, value: CatalogDtoMap[R][]) {
   if (resource === "units") units = value as UnitDto[];
   if (resource === "items") items = value as ItemDto[];
-  if (resource === "work-centers") workCenters = value as WorkCenterDto[];
+  if (resource === "workstations") workstations = value as WorkstationDto[];
+  if (resource === "operation-types") operationTypes = value as OperationTypeDto[];
   if (resource === "boms") boms = value as BomDto[];
   if (resource === "routes") routes = value as RouteDto[];
 }
@@ -515,7 +495,7 @@ function createTasksForOrder(order: OrderDto) {
 
     for (const operation of route.operations) {
       const outputItem = operation.outputs[0]?.item ?? route.item;
-      const workCenter = findActiveWorkCenter(operation.work_center_id);
+      const workCenter = findActiveWorkstation(operation.workstation_id);
 
       for (const input of operation.inputs) {
         const inputItem = findActiveItem(input.item_id);
@@ -531,13 +511,13 @@ function createTasksForOrder(order: OrderDto) {
           order_line_id: line.id,
           item_id: input.item_id,
           route_operation_id: operation.id,
-          work_center_id: operation.work_center_id,
-          source_work_center_id: null,
-          target_work_center_id: operation.work_center_id,
+          workstation_id: operation.workstation_id,
+          source_workstation_id: null,
+          target_workstation_id: operation.workstation_id,
           item: toTaskItem(inputItem),
-          work_center: toTaskWorkCenter(workCenter),
-          source_work_center: null,
-          target_work_center: toTaskWorkCenter(workCenter),
+          workstation: toTaskWorkstation(workCenter),
+          source_workstation: null,
+          target_workstation: toTaskWorkstation(workCenter),
           executor_id: null,
           created_at: currentIso(),
           updated_at: currentIso(),
@@ -556,13 +536,13 @@ function createTasksForOrder(order: OrderDto) {
         order_line_id: line.id,
         item_id: outputItem.id,
         route_operation_id: operation.id,
-        work_center_id: operation.work_center_id,
-        source_work_center_id: null,
-        target_work_center_id: null,
+        workstation_id: operation.workstation_id,
+        source_workstation_id: null,
+        target_workstation_id: null,
         item: { id: outputItem.id, name: outputItem.name, unit_id: outputItem.unit_id },
-        work_center: toTaskWorkCenter(workCenter),
-        source_work_center: null,
-        target_work_center: null,
+        workstation: toTaskWorkstation(workCenter),
+        source_workstation: null,
+        target_workstation: null,
         executor_id: null,
         created_at: currentIso(),
         updated_at: currentIso(),
@@ -581,13 +561,13 @@ function createTasksForOrder(order: OrderDto) {
           order_line_id: line.id,
           item_id: outputItem.id,
           route_operation_id: operation.id,
-          work_center_id: operation.work_center_id,
-          source_work_center_id: null,
-          target_work_center_id: null,
+          workstation_id: operation.workstation_id,
+          source_workstation_id: null,
+          target_workstation_id: null,
           item: { id: outputItem.id, name: outputItem.name, unit_id: outputItem.unit_id },
-          work_center: toTaskWorkCenter(workCenter),
-          source_work_center: null,
-          target_work_center: null,
+          workstation: toTaskWorkstation(workCenter),
+          source_workstation: null,
+          target_workstation: null,
           executor_id: null,
           created_at: currentIso(),
           updated_at: currentIso(),
@@ -607,7 +587,7 @@ export async function getCatalog<R extends CatalogResource>(
 }
 
 export async function getCatalogItem<R extends CatalogResource>(resource: R, id: number) {
-  const item = getCatalogStore(resource).find((candidate) => candidate.id === id && !candidate.deleted_at);
+  const item = getCatalogStore(resource).find((candidate) => candidate.id === id && !isDeleted(candidate));
   if (!item) throw new Error("Запись справочника не найдена.");
   return delay(item);
 }
@@ -624,7 +604,7 @@ export async function updateCatalogItem<R extends CatalogResource>(
   payload: CatalogUpdatePayloadMap[R],
 ) {
   const store = getCatalogStore(resource);
-  const index = store.findIndex((item) => item.id === id && !item.deleted_at);
+  const index = store.findIndex((item) => item.id === id && !isDeleted(item));
   if (index < 0) throw new Error("Запись справочника не найдена.");
 
   const updated = buildCatalogItem(resource, { ...store[index], ...payload, id } as CatalogPayloadMap[R] & { id: number });
@@ -635,10 +615,12 @@ export async function updateCatalogItem<R extends CatalogResource>(
 
 export async function deleteCatalogItem<R extends CatalogResource>(resource: R, id: number) {
   const store = getCatalogStore(resource);
-  const item = store.find((candidate) => candidate.id === id && !candidate.deleted_at);
+  const item = store.find((candidate) => candidate.id === id && !isDeleted(candidate));
   if (!item) throw new Error("Запись справочника не найдена.");
-  item.deleted_at = currentIso();
-  item.updated_at = currentIso();
+  if (!("deleted_at" in item)) throw new Error("Удаление недоступно для этого справочника.");
+  const deletable = item as { deleted_at: string | null; updated_at: string };
+  deletable.deleted_at = currentIso();
+  deletable.updated_at = currentIso();
   return delay(undefined);
 }
 
@@ -668,9 +650,14 @@ function buildCatalogItem<R extends CatalogResource>(resource: R, payload: Catal
     } as CatalogDtoMap[R];
   }
 
-  if (resource === "work-centers") {
-    const data = payload as CatalogPayloadMap["work-centers"];
-    return { ...base, name: data.name, type: data.type, description: data.description ?? null } as CatalogDtoMap[R];
+  if (resource === "workstations") {
+    const data = payload as CatalogPayloadMap["workstations"];
+    return { id: payload.id ?? nextId(workstations), name: data.name } as CatalogDtoMap[R];
+  }
+
+  if (resource === "operation-types") {
+    const data = payload as CatalogPayloadMap["operation-types"];
+    return { id: payload.id ?? nextId(operationTypes), name: data.name } as CatalogDtoMap[R];
   }
 
   if (resource === "boms") {
@@ -734,28 +721,6 @@ export async function updateAdminUser(id: number, payload: UpdateUserPayload) {
 
 export async function getAdminWorkstations() {
   return delay(workstations);
-}
-
-export async function createAdminWorkstation(payload: CreateWorkstationPayload) {
-  const next: WorkstationDto = {
-    id: nextId(workstations),
-    name: payload.name,
-  };
-
-  workstations = [next, ...workstations];
-  return delay(next);
-}
-
-export async function deleteAdminWorkstation(id: number) {
-  if (tasks.some((task) => task.work_center_id === id)) {
-    throw new Error("Cannot delete workstation with tasks");
-  }
-  workstations = workstations.filter((workstation) => workstation.id !== id);
-  users = users.map((user) => ({
-    ...user,
-    workstations: user.workstations.filter((workstation) => workstation.id !== id),
-  }));
-  return delay(undefined);
 }
 
 function makeUsername(fullName: string) {

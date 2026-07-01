@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,13 +19,13 @@ from app.catalogs.common.service import (
 from app.catalogs.route.schema import RouteCreate, RouteOperationCreate, RouteUpdate
 from app.db.models.item import Item
 from app.db.models.route import OperationInput, OperationOutput, Route, RouteOperation
-from app.db.models.work_center import WorkCenter
+from app.db.models.workstation import Workstation
 
 
 def route_options() -> list[Any]:
     return [
         selectinload(Route.item),
-        selectinload(Route.operations).selectinload(RouteOperation.work_center),
+        selectinload(Route.operations).selectinload(RouteOperation.workstation),
         selectinload(Route.operations)
         .selectinload(RouteOperation.inputs)
         .selectinload(OperationInput.item),
@@ -62,12 +64,11 @@ async def ensure_route_refs(
 ) -> None:
     await ensure_active_exists(session, Item, item_id, "Item")
     for operation in operations:
-        await ensure_active_exists(
-            session,
-            WorkCenter,
-            operation.work_center_id,
-            "Work center",
+        result = await session.execute(
+            select(Workstation.id).where(Workstation.id == operation.workstation_id)
         )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="Workstation not found")
         for item in [*operation.inputs, *operation.outputs]:
             await ensure_active_exists(session, Item, item.item_id, "Operation item")
 

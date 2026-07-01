@@ -66,14 +66,15 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username')
     )
-    op.create_table('work_centers',
+    op.create_table('workstations',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('name', sa.Text(), nullable=False),
-    sa.Column('type', sa.Text(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
+    )
+    op.create_table('operation_types',
+    sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('name', sa.Text(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -98,12 +99,12 @@ def upgrade() -> None:
     )
     op.create_index('ix_sensor_values_sensor_id', 'sensor_values', ['sensor_id'], unique=False)
     op.create_index('ix_sensor_values_ts', 'sensor_values', ['ts'], unique=False)
-    op.create_table('user_work_centers',
-    sa.Column('work_center_id', sa.BigInteger(), nullable=False),
+    op.create_table('user_workstations',
+    sa.Column('workstation_id', sa.BigInteger(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['work_center_id'], ['work_centers.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('work_center_id', 'user_id')
+    sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('workstation_id', 'user_id')
     )
     op.create_table('boms',
     sa.Column('id', sa.BigInteger(), nullable=False),
@@ -176,19 +177,19 @@ def upgrade() -> None:
     sa.Column('route_id', sa.BigInteger(), nullable=False),
     sa.Column('operation_number', sa.Integer(), nullable=False),
     sa.Column('name', sa.Text(), nullable=False),
-    sa.Column('work_center_id', sa.BigInteger(), nullable=False),
+    sa.Column('workstation_id', sa.BigInteger(), nullable=False),
     sa.Column('setup_time_minutes', sa.Integer(), nullable=False),
     sa.Column('run_time_minutes', sa.Integer(), nullable=False),
     sa.Column('requires_quality_review', sa.Boolean(), nullable=False),
     sa.CheckConstraint('run_time_minutes >= 0', name='ck_route_operations_run_time_minutes_non_negative'),
     sa.CheckConstraint('setup_time_minutes >= 0', name='ck_route_operations_setup_time_minutes_non_negative'),
     sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['work_center_id'], ['work_centers.id'], ),
+    sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('route_id', 'operation_number', name='uq_route_operations_route_id_operation_number')
     )
     op.create_index('ix_route_operations_route_id', 'route_operations', ['route_id'], unique=False)
-    op.create_index('ix_route_operations_work_center_id', 'route_operations', ['work_center_id'], unique=False)
+    op.create_index('ix_route_operations_workstation_id', 'route_operations', ['workstation_id'], unique=False)
     op.create_table('operation_inputs',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('operation_id', sa.BigInteger(), nullable=False),
@@ -225,9 +226,9 @@ def upgrade() -> None:
     sa.Column('order_id', sa.BigInteger(), nullable=False),
     sa.Column('order_line_id', sa.BigInteger(), nullable=False),
     sa.Column('route_operation_id', sa.BigInteger(), nullable=True),
-    sa.Column('work_center_id', sa.BigInteger(), nullable=True),
-    sa.Column('source_work_center_id', sa.BigInteger(), nullable=True),
-    sa.Column('target_work_center_id', sa.BigInteger(), nullable=True),
+    sa.Column('workstation_id', sa.BigInteger(), nullable=True),
+    sa.Column('source_workstation_id', sa.BigInteger(), nullable=True),
+    sa.Column('target_workstation_id', sa.BigInteger(), nullable=True),
     sa.Column('executor_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -236,16 +237,16 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['order_line_id'], ['order_lines.id'], ),
     sa.ForeignKeyConstraint(['route_operation_id'], ['route_operations.id'], ),
-    sa.ForeignKeyConstraint(['source_work_center_id'], ['work_centers.id'], ),
-    sa.ForeignKeyConstraint(['target_work_center_id'], ['work_centers.id'], ),
-    sa.ForeignKeyConstraint(['work_center_id'], ['work_centers.id'], ),
+    sa.ForeignKeyConstraint(['source_workstation_id'], ['workstations.id'], ),
+    sa.ForeignKeyConstraint(['target_workstation_id'], ['workstations.id'], ),
+    sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_tasks_order_id', 'tasks', ['order_id'], unique=False)
     op.create_index('ix_tasks_order_line_id', 'tasks', ['order_line_id'], unique=False)
     op.create_index('ix_tasks_status', 'tasks', ['status'], unique=False)
     op.create_index('ix_tasks_task_type', 'tasks', ['task_type'], unique=False)
-    op.create_index('ix_tasks_work_center_id', 'tasks', ['work_center_id'], unique=False)
+    op.create_index('ix_tasks_workstation_id', 'tasks', ['workstation_id'], unique=False)
     op.create_table('task_dependencies',
     sa.Column('task_id', sa.BigInteger(), nullable=False),
     sa.Column('depends_on_task_id', sa.BigInteger(), nullable=False),
@@ -281,7 +282,7 @@ def downgrade() -> None:
     op.drop_index('ix_task_history_new_status', table_name='task_history')
     op.drop_table('task_history')
     op.drop_table('task_dependencies')
-    op.drop_index('ix_tasks_work_center_id', table_name='tasks')
+    op.drop_index('ix_tasks_workstation_id', table_name='tasks')
     op.drop_index('ix_tasks_task_type', table_name='tasks')
     op.drop_index('ix_tasks_status', table_name='tasks')
     op.drop_index('ix_tasks_order_line_id', table_name='tasks')
@@ -293,7 +294,7 @@ def downgrade() -> None:
     op.drop_index('ix_operation_inputs_operation_id', table_name='operation_inputs')
     op.drop_index('ix_operation_inputs_item_id', table_name='operation_inputs')
     op.drop_table('operation_inputs')
-    op.drop_index('ix_route_operations_work_center_id', table_name='route_operations')
+    op.drop_index('ix_route_operations_workstation_id', table_name='route_operations')
     op.drop_index('ix_route_operations_route_id', table_name='route_operations')
     op.drop_table('route_operations')
     op.drop_index('ix_order_lines_route_id', table_name='order_lines')
@@ -312,13 +313,14 @@ def downgrade() -> None:
     op.drop_index('ix_boms_item_id', table_name='boms')
     op.drop_index('ix_boms_is_default', table_name='boms')
     op.drop_table('boms')
-    op.drop_table('user_work_centers')
+    op.drop_table('user_workstations')
     op.drop_index('ix_sensor_values_ts', table_name='sensor_values')
     op.drop_index('ix_sensor_values_sensor_id', table_name='sensor_values')
     op.drop_table('sensor_values')
     op.drop_index('ix_items_name', table_name='items')
     op.drop_table('items')
-    op.drop_table('work_centers')
+    op.drop_table('operation_types')
+    op.drop_table('workstations')
     op.drop_table('users')
     op.drop_table('units')
     op.drop_index('ix_sensors_code_channel', table_name='sensors')

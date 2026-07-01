@@ -36,10 +36,9 @@ class UpdateTaskRequest(BaseModel):
     comment: str | None = None
 
 
-class TaskWorkCenterResponse(BaseModel):
+class TaskWorkstationResponse(BaseModel):
     id: int
     name: str
-    type: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,13 +63,13 @@ class TaskResponse(BaseModel):
     order_line_id: int
     item_id: int
     route_operation_id: int | None
-    work_center_id: int | None
-    source_work_center_id: int | None
-    target_work_center_id: int | None
+    workstation_id: int | None
+    source_workstation_id: int | None
+    target_workstation_id: int | None
     item: TaskItemResponse
-    work_center: TaskWorkCenterResponse | None
-    source_work_center: TaskWorkCenterResponse | None
-    target_work_center: TaskWorkCenterResponse | None
+    workstation: TaskWorkstationResponse | None
+    source_workstation: TaskWorkstationResponse | None
+    target_workstation: TaskWorkstationResponse | None
     executor_id: int | None
     created_at: datetime
     updated_at: datetime

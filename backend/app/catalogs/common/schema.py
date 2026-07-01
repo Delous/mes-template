@@ -26,10 +26,8 @@ class ItemSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class WorkCenterSummary(BaseModel):
+class WorkstationSummary(BaseModel):
     id: int
     name: str
-    type: str
-    description: str | None
 
     model_config = ConfigDict(from_attributes=True)

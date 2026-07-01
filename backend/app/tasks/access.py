@@ -24,7 +24,7 @@ def visible_task_filter(user: UserPublic):
     if user.role == "operator":
         return and_(
             Task.task_type == "operation",
-            Task.work_center_id.in_(user.workstation_ids),
+            Task.workstation_id.in_(user.workstation_ids),
             or_(
                 and_(
                     Task.status == "in_progress",
@@ -59,7 +59,7 @@ def can_view_task(user: UserPublic, task: Task) -> bool:
     if user.role == "operator":
         if task.task_type != "operation":
             return False
-        if task.work_center_id not in user.workstation_ids:
+        if task.workstation_id not in user.workstation_ids:
             return False
         if task.status == "in_progress":
             return task.executor_id == user.id
@@ -100,7 +100,7 @@ def validate_update_task_status(
         raise HTTPException(status_code=403, detail="Task update is forbidden")
 
     if user.role == "operator":
-        if task.task_type != "operation" or task.work_center_id not in user.workstation_ids:
+        if task.task_type != "operation" or task.workstation_id not in user.workstation_ids:
             raise HTTPException(status_code=403, detail="Task update is forbidden")
 
     if user.role == "reviewer" and task.task_type != "quality_review":
