@@ -98,7 +98,6 @@ export default function TaskPage() {
                 <Detail label="План" value={formatQuantity(task.planned_quantity)} />
                 <Detail label="Факт" value={formatQuantity(task.actual_quantity)} />
                 <Detail label="Брак" value={formatQuantity(task.defect_quantity)} />
-                <Detail label="Операция" value={task.route_operation_id ?? "Не указана"} />
               </Grid>
             </Box>
 

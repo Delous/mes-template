@@ -85,10 +85,16 @@ export type WorkstationSummary = {
   name: string;
 };
 
+export type OperationTypeSummary = {
+  id: number;
+  name: string;
+};
+
 export type ItemDto = BaseCatalogDto & {
   unit_id: number;
   unit: UnitSummary;
   description: string | null;
+  resource_specification: ResourceSpecificationDto | null;
 };
 
 export type ItemPayload = {
@@ -116,98 +122,47 @@ export type OperationTypePayload = {
 
 export type OperationTypeUpdatePayload = Partial<OperationTypePayload>;
 
-export type BomLinePayload = {
-  component_item_id: number;
-  quantity: string;
-  scrap_percent: string;
-};
-
-export type BomLineDto = BomLinePayload & {
-  id: number;
-  component_item: ItemSummary;
-};
-
-export type BomDto = BaseCatalogDto & {
-  item_id: number;
-  item: ItemSummary;
-  version: string;
-  status: CatalogStatus | string;
-  is_default: boolean;
-  lines: BomLineDto[];
-};
-
-export type BomPayload = {
-  item_id: number;
-  name: string;
-  version: string;
-  status: CatalogStatus | string;
-  is_default: boolean;
-  lines: BomLinePayload[];
-};
-
-export type BomUpdatePayload = Partial<Omit<BomPayload, "lines">> & {
-  lines?: BomLinePayload[];
-};
-
-export type RouteIoPayload = {
+export type ResourceSpecificationInputPayload = {
   item_id: number;
   quantity: string;
 };
 
-export type RouteIoDto = RouteIoPayload & {
+export type ResourceSpecificationInputDto = ResourceSpecificationInputPayload & {
   id: number;
   item: ItemSummary;
 };
 
-export type RouteOperationPayload = {
-  operation_number: number;
+export type ResourceSpecificationPayload = {
   name: string;
+  operation_type_id: number;
   workstation_id: number;
-  setup_time_minutes: number;
-  run_time_minutes: number;
-  requires_quality_review: boolean;
-  inputs: RouteIoPayload[];
-  outputs: RouteIoPayload[];
+  output_quantity: number;
+  inputs: ResourceSpecificationInputPayload[];
 };
 
-export type RouteOperationDto = RouteOperationPayload & {
+export type ResourceSpecificationDto = {
   id: number;
-  workstation: WorkstationSummary;
-  inputs: RouteIoDto[];
-  outputs: RouteIoDto[];
-};
-
-export type RouteDto = BaseCatalogDto & {
-  item_id: number;
-  item: ItemSummary;
-  version: string;
-  status: CatalogStatus | string;
-  is_default: boolean;
-  operations: RouteOperationDto[];
-};
-
-export type RoutePayload = {
   item_id: number;
   name: string;
-  version: string;
-  status: CatalogStatus | string;
-  is_default: boolean;
-  operations: RouteOperationPayload[];
+  operation_type_id: number;
+  workstation_id: number;
+  output_quantity: number;
+  operation_type: OperationTypeSummary;
+  workstation: WorkstationSummary;
+  inputs: ResourceSpecificationInputDto[];
 };
 
-export type RouteUpdatePayload = Partial<Omit<RoutePayload, "operations">> & {
-  operations?: RouteOperationPayload[];
+export type ResourceSpecificationUpdatePayload = Partial<Omit<ResourceSpecificationPayload, "inputs">> & {
+  inputs?: ResourceSpecificationInputPayload[];
 };
 
-export type CatalogResource = "units" | "items" | "workstations" | "operation-types" | "boms" | "routes";
+export type CatalogResource = "units" | "items" | "workstations" | "operation-types";
 
 export type CatalogDtoMap = {
   units: UnitDto;
   items: ItemDto;
   workstations: WorkstationDto;
   "operation-types": OperationTypeDto;
-  boms: BomDto;
-  routes: RouteDto;
 };
 
 export type CatalogPayloadMap = {
@@ -215,8 +170,6 @@ export type CatalogPayloadMap = {
   items: ItemPayload;
   workstations: WorkstationPayload;
   "operation-types": OperationTypePayload;
-  boms: BomPayload;
-  routes: RoutePayload;
 };
 
 export type CatalogUpdatePayloadMap = {
@@ -224,14 +177,10 @@ export type CatalogUpdatePayloadMap = {
   items: ItemUpdatePayload;
   workstations: WorkstationUpdatePayload;
   "operation-types": OperationTypeUpdatePayload;
-  boms: BomUpdatePayload;
-  routes: RouteUpdatePayload;
 };
 
 export type OrderLinePayload = {
   item_id: number;
-  route_id: number;
-  bom_id?: number | null;
   quantity: string;
 };
 
@@ -243,8 +192,6 @@ export type CreateOrderPayload = {
 export type OrderLineDto = {
   id: number;
   item_id: number;
-  route_id: number | null;
-  bom_id: number | null;
   quantity: string;
 };
 
@@ -277,7 +224,7 @@ export type TaskDto = {
   order_id: number;
   order_line_id: number;
   item_id: number;
-  route_operation_id: number | null;
+  resource_specification_id: number | null;
   workstation_id: number | null;
   source_workstation_id: number | null;
   target_workstation_id: number | null;
@@ -304,4 +251,10 @@ export type UpdateTaskPayload = {
 export type ApiErrorBody = {
   detail?: unknown;
   message?: unknown;
+};
+
+export type CycleConflictDetail = {
+  message: string;
+  item_id: number;
+  item_name: string;
 };

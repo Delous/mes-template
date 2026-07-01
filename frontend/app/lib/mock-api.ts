@@ -1,13 +1,12 @@
 import type {
   AdminUserDto,
-  BomDto,
-  BomLinePayload,
   CatalogDtoMap,
   CatalogPayloadMap,
   CatalogResource,
   CatalogUpdatePayloadMap,
   CreateOrderPayload,
   CreateUserPayload,
+  CycleConflictDetail,
   ItemDto,
   ItemSummary,
   ListResponse,
@@ -15,9 +14,8 @@ import type {
   MeDto,
   OperationTypeDto,
   OrderDto,
-  RouteDto,
-  RouteIoPayload,
-  RouteOperationPayload,
+  ResourceSpecificationPayload,
+  ResourceSpecificationUpdatePayload,
   TaskDto,
   TaskStatus,
   UpdateTaskPayload,
@@ -25,7 +23,6 @@ import type {
   UnitDto,
   UnitSummary,
   WorkstationDto,
-  WorkstationSummary,
 } from "@/types/api";
 
 const now = "2026-06-15T10:00:00Z";
@@ -34,6 +31,16 @@ const storageKey = "mes-template:mock-user";
 let units: UnitDto[] = [
   { id: 1, name: "Метр", symbol: "м", created_at: now, updated_at: now, deleted_at: null },
   { id: 2, name: "Штука", symbol: "шт", created_at: now, updated_at: now, deleted_at: null },
+];
+
+let workstations: WorkstationDto[] = [
+  { id: 1, name: "Пост экструзии" },
+  { id: 2, name: "Пост сборки" },
+];
+
+let operationTypes: OperationTypeDto[] = [
+  { id: 1, name: "Экструзия" },
+  { id: 2, name: "Сборка" },
 ];
 
 let items: ItemDto[] = [
@@ -46,6 +53,7 @@ let items: ItemDto[] = [
     created_at: now,
     updated_at: now,
     deleted_at: null,
+    resource_specification: null,
   },
   {
     id: 100,
@@ -56,107 +64,22 @@ let items: ItemDto[] = [
     created_at: now,
     updated_at: now,
     deleted_at: null,
+    resource_specification: null,
   },
 ];
 
-let workstations: WorkstationDto[] = [
-  { id: 1, name: "Пост экструзии" },
-  { id: 2, name: "Склад сырья" },
-  { id: 3, name: "ОТК" },
-];
-
-let operationTypes: OperationTypeDto[] = [
-  { id: 1, name: "Экструзия" },
-  { id: 2, name: "Маркировка" },
-];
-
-let boms: BomDto[] = [
-  {
-    id: 1,
-    item_id: 100,
-    item: toItemSummary(items[1]),
-    name: "BOM Кабель 3x2.5",
-    version: "1.0",
-    status: "active",
-    is_default: true,
-    lines: [
-      {
-        id: 1,
-        component_item_id: 10,
-        component_item: toItemSummary(items[0]),
-        quantity: "3.000000",
-        scrap_percent: "1.50",
-      },
-    ],
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-  },
-];
-
-let routes: RouteDto[] = [
-  {
-    id: 1,
-    item_id: 100,
-    item: toItemSummary(items[1]),
-    name: "Маршрут Кабель 3x2.5",
-    version: "1.0",
-    status: "active",
-    is_default: true,
-    operations: [
-      {
-        id: 1,
-        operation_number: 10,
-        name: "Экструзия",
-        workstation_id: 1,
-        workstation: toWorkstationSummary(workstations[0]),
-        setup_time_minutes: 15,
-        run_time_minutes: 60,
-        requires_quality_review: true,
-        inputs: [{ id: 1, item_id: 10, item: toItemSummary(items[0]), quantity: "3.000000" }],
-        outputs: [{ id: 1, item_id: 100, item: toItemSummary(items[1]), quantity: "1.000000" }],
-      },
-      {
-        id: 2,
-        operation_number: 20,
-        name: "Маркировка",
-        workstation_id: 1,
-        workstation: toWorkstationSummary(workstations[0]),
-        setup_time_minutes: 5,
-        run_time_minutes: 20,
-        requires_quality_review: false,
-        inputs: [{ id: 2, item_id: 100, item: toItemSummary(items[1]), quantity: "1.000000" }],
-        outputs: [{ id: 2, item_id: 100, item: toItemSummary(items[1]), quantity: "1.000000" }],
-      },
-    ],
-    created_at: now,
-    updated_at: now,
-    deleted_at: null,
-  },
-];
+items[1].resource_specification = buildResourceSpecification(1, items[1].id, {
+  name: "Производство кабеля",
+  operation_type_id: 1,
+  workstation_id: 1,
+  output_quantity: 1,
+  inputs: [{ item_id: 10, quantity: "3" }],
+});
 
 let users: AdminUserDto[] = [
-  {
-    id: 1,
-    username: "admin",
-    full_name: "Администратор",
-    role: "admin",
-    workstations,
-  },
-  {
-    id: 2,
-    username: "operator",
-    full_name: "Оператор линии",
-    role: "operator",
-    workstations: [workstations[0]],
-  },
-  {
-    id: 3,
-    username: "reviewer",
-    full_name: "Инспектор ОТК",
-    role: "reviewer",
-    workstations: [workstations[2]],
-  },
+  { id: 1, username: "admin", full_name: "Администратор", role: "admin", workstations },
+  { id: 2, username: "operator", full_name: "Оператор линии", role: "operator", workstations: [workstations[0]] },
+  { id: 3, username: "reviewer", full_name: "Инспектор ОТК", role: "reviewer", workstations: [workstations[1]] },
 ];
 
 let orders: OrderDto[] = [
@@ -166,7 +89,7 @@ let orders: OrderDto[] = [
     status: "created",
     created_at: now,
     updated_at: now,
-    lines: [{ id: 1, item_id: 100, route_id: 1, bom_id: 1, quantity: "100.000000" }],
+    lines: [{ id: 1, item_id: 100, quantity: "100.000000" }],
   },
 ];
 
@@ -175,14 +98,14 @@ let tasks: TaskDto[] = [
     id: 1,
     task_type: "warehouse_delivery",
     status: "to_do",
-    description: "Доставить материалы: 10",
+    description: "Доставить материалы: Медная жила",
     planned_quantity: "300.000000",
     actual_quantity: "0.000000",
     defect_quantity: "0.000000",
     order_id: 1,
     order_line_id: 1,
     item_id: 10,
-    route_operation_id: 1,
+    resource_specification_id: 1,
     workstation_id: 1,
     source_workstation_id: null,
     target_workstation_id: 1,
@@ -198,14 +121,14 @@ let tasks: TaskDto[] = [
     id: 2,
     task_type: "operation",
     status: "to_do",
-    description: "Экструзия",
+    description: "Производство кабеля",
     planned_quantity: "100.000000",
     actual_quantity: "0.000000",
     defect_quantity: "0.000000",
     order_id: 1,
     order_line_id: 1,
     item_id: 100,
-    route_operation_id: 1,
+    resource_specification_id: 1,
     workstation_id: 1,
     source_workstation_id: null,
     target_workstation_id: null,
@@ -235,18 +158,14 @@ function currentIso() {
 
 function saveUser(user: MeDto | null) {
   if (typeof window === "undefined") return;
-  if (user) {
-    window.localStorage.setItem(storageKey, JSON.stringify(user));
-  } else {
-    window.localStorage.removeItem(storageKey);
-  }
+  if (user) window.localStorage.setItem(storageKey, JSON.stringify(user));
+  else window.localStorage.removeItem(storageKey);
 }
 
 function readUser(): MeDto | null {
   if (typeof window === "undefined") return null;
   const raw = window.localStorage.getItem(storageKey);
   if (!raw) return null;
-
   try {
     return JSON.parse(raw) as MeDto;
   } catch {
@@ -275,85 +194,12 @@ function toItemSummary(item: ItemDto): ItemSummary {
   return { id: item.id, name: item.name, unit_id: item.unit_id, description: item.description };
 }
 
-function toWorkstationSummary(workstation: WorkstationDto): WorkstationSummary {
-  return { id: workstation.id, name: workstation.name };
-}
-
-function toTaskWorkstation(workstation: WorkstationDto) {
-  return { id: workstation.id, name: workstation.name };
-}
-
 function toTaskItem(item: ItemDto) {
   return { id: item.id, name: item.name, unit_id: item.unit_id };
 }
 
-function findActiveItem(id: number) {
-  const item = items.find((candidate) => candidate.id === id && !candidate.deleted_at);
-  if (!item) throw new Error(`Номенклатура не найдена: ${id}`);
-  return item;
-}
-
-function findActiveRoute(id: number) {
-  const route = routes.find((candidate) => candidate.id === id && !candidate.deleted_at);
-  if (!route) throw new Error(`Маршрут не найден: ${id}`);
-  if (route.status !== "active") throw new Error(`Маршрут не активен: ${id}`);
-  return route;
-}
-
-function findActiveWorkstation(id: number) {
-  const workstation = workstations.find((candidate) => candidate.id === id);
-  if (!workstation) throw new Error(`Рабочий пост не найден: ${id}`);
-  return workstation;
-}
-
-function rebuildItemRelations() {
-  items = items.map((item) => ({
-    ...item,
-    unit: toUnitSummary(units.find((unit) => unit.id === item.unit_id) ?? units[0]),
-  }));
-}
-
-function buildBomLines(lines: BomLinePayload[]) {
-  return lines.map((line, index) => {
-    const componentItem = findActiveItem(Number(line.component_item_id));
-    return {
-      id: index + 1,
-      component_item_id: Number(line.component_item_id),
-      component_item: toItemSummary(componentItem),
-      quantity: decimal(line.quantity),
-      scrap_percent: decimal(line.scrap_percent, 2),
-    };
-  });
-}
-
-function buildRouteIo(itemsPayload: RouteIoPayload[]) {
-  return itemsPayload.map((item, index) => {
-    const entity = findActiveItem(Number(item.item_id));
-    return {
-      id: index + 1,
-      item_id: Number(item.item_id),
-      item: toItemSummary(entity),
-      quantity: decimal(item.quantity),
-    };
-  });
-}
-
-function buildRouteOperations(operations: RouteOperationPayload[]) {
-  return operations.map((operation, index) => {
-    const workCenter = findActiveWorkstation(Number(operation.workstation_id));
-    return {
-      id: index + 1,
-      operation_number: Number(operation.operation_number),
-      name: operation.name,
-      workstation_id: Number(operation.workstation_id),
-      workstation: toWorkstationSummary(workCenter),
-      setup_time_minutes: Number(operation.setup_time_minutes) || 0,
-      run_time_minutes: Number(operation.run_time_minutes) || 0,
-      requires_quality_review: operation.requires_quality_review,
-      inputs: buildRouteIo(operation.inputs),
-      outputs: buildRouteIo(operation.outputs),
-    };
-  });
+function toTaskWorkstation(workstation: WorkstationDto) {
+  return { id: workstation.id, name: workstation.name };
 }
 
 function decimal(value: string | number, digits = 6) {
@@ -369,14 +215,52 @@ function activeFilter<T extends { id: number; deleted_at?: string | null }>(item
   return includeDeleted ? itemsToFilter : itemsToFilter.filter((item) => !isDeleted(item));
 }
 
+function findActiveItem(id: number) {
+  const item = items.find((candidate) => candidate.id === id && !candidate.deleted_at);
+  if (!item) throw new Error(`Номенклатура не найдена: ${id}`);
+  return item;
+}
+
+function findWorkstation(id: number) {
+  const workstation = workstations.find((candidate) => candidate.id === id);
+  if (!workstation) throw new Error(`Рабочий пост не найден: ${id}`);
+  return workstation;
+}
+
+function findOperationType(id: number) {
+  const operationType = operationTypes.find((candidate) => candidate.id === id);
+  if (!operationType) throw new Error(`Тип операции не найден: ${id}`);
+  return operationType;
+}
+
+function buildResourceSpecification(id: number, itemId: number, payload: ResourceSpecificationPayload) {
+  return {
+    id,
+    item_id: itemId,
+    name: payload.name,
+    operation_type_id: Number(payload.operation_type_id),
+    workstation_id: Number(payload.workstation_id),
+    output_quantity: Number(payload.output_quantity),
+    operation_type: findOperationType(Number(payload.operation_type_id)),
+    workstation: findWorkstation(Number(payload.workstation_id)),
+    inputs: payload.inputs.map((input, index) => {
+      const item = findActiveItem(Number(input.item_id));
+      return {
+        id: index + 1,
+        item_id: item.id,
+        item: toItemSummary(item),
+        quantity: decimal(input.quantity),
+      };
+    }),
+  };
+}
+
 function getCatalogStore<R extends CatalogResource>(resource: R): CatalogDtoMap[R][] {
   const stores = {
     units,
     items,
     workstations,
     "operation-types": operationTypes,
-    boms,
-    routes,
   } satisfies Record<CatalogResource, unknown[]>;
   return stores[resource] as CatalogDtoMap[R][];
 }
@@ -386,15 +270,84 @@ function setCatalogStore<R extends CatalogResource>(resource: R, value: CatalogD
   if (resource === "items") items = value as ItemDto[];
   if (resource === "workstations") workstations = value as WorkstationDto[];
   if (resource === "operation-types") operationTypes = value as OperationTypeDto[];
-  if (resource === "boms") boms = value as BomDto[];
-  if (resource === "routes") routes = value as RouteDto[];
+}
+
+function rebuildItemRelations() {
+  items = items.map((item) => ({
+    ...item,
+    unit: toUnitSummary(units.find((unit) => unit.id === item.unit_id) ?? units[0]),
+  }));
+}
+
+function buildCatalogItem<R extends CatalogResource>(resource: R, payload: CatalogPayloadMap[R] & { id?: number }): CatalogDtoMap[R] {
+  const timestamp = currentIso();
+  const base = {
+    id: payload.id ?? nextId(getCatalogStore(resource)),
+    created_at: "created_at" in payload && typeof payload.created_at === "string" ? payload.created_at : timestamp,
+    updated_at: timestamp,
+    deleted_at: null,
+  };
+
+  if (resource === "units") {
+    return { ...base, name: String(payload.name), symbol: String((payload as CatalogPayloadMap["units"]).symbol) } as CatalogDtoMap[R];
+  }
+
+  if (resource === "items") {
+    const data = payload as CatalogPayloadMap["items"] & Partial<ItemDto>;
+    const unit = units.find((candidate) => candidate.id === Number(data.unit_id) && !candidate.deleted_at);
+    if (!unit) throw new Error("Единица измерения не найдена.");
+    return {
+      ...base,
+      name: data.name,
+      unit_id: Number(data.unit_id),
+      unit: toUnitSummary(unit),
+      description: data.description ?? null,
+      resource_specification: data.resource_specification ?? null,
+    } as CatalogDtoMap[R];
+  }
+
+  if (resource === "workstations") {
+    const data = payload as CatalogPayloadMap["workstations"];
+    return { id: payload.id ?? nextId(workstations), name: data.name } as CatalogDtoMap[R];
+  }
+
+  const data = payload as CatalogPayloadMap["operation-types"];
+  return { id: payload.id ?? nextId(operationTypes), name: data.name } as CatalogDtoMap[R];
+}
+
+function detectCycle(targetItemId: number, inputIds: number[]) {
+  const graph = Object.fromEntries(
+    items
+      .filter((item) => item.id !== targetItemId && item.resource_specification)
+      .map((item) => [item.id, item.resource_specification?.inputs.map((input) => input.item_id) ?? []]),
+  );
+
+  function reachesTarget(itemId: number, visited = new Set<number>()): boolean {
+    if (itemId === targetItemId) return true;
+    if (visited.has(itemId)) return false;
+    visited.add(itemId);
+    return (graph[itemId] ?? []).some((nextItemId) => reachesTarget(nextItemId, visited));
+  }
+
+  return inputIds.find((itemId) => reachesTarget(itemId)) ?? null;
+}
+
+function throwCycleConflict(itemId: number): never {
+  const item = findActiveItem(itemId);
+  const detail: CycleConflictDetail = {
+    message: "Циклическая зависимость ресурсной спецификации",
+    item_id: item.id,
+    item_name: item.name,
+  };
+  const error = new Error(`${detail.message}: ${detail.item_name}`) as Error & {
+    response: { data: { detail: CycleConflictDetail } };
+  };
+  error.response = { data: { detail } };
+  throw error;
 }
 
 export async function login(payload: LoginPayload) {
-  if (!payload.login || !payload.password) {
-    throw new Error("Введите логин и пароль.");
-  }
-
+  if (!payload.login || !payload.password) throw new Error("Введите логин и пароль.");
   const user = users.find((item) => item.username === payload.login) ?? users[1];
   const me: MeDto = {
     id: user.id,
@@ -403,7 +356,6 @@ export async function login(payload: LoginPayload) {
     role: user.role,
     workstation_ids: user.workstations.map((workstation) => workstation.id),
   };
-
   saveUser(me);
   return delay(me);
 }
@@ -430,17 +382,10 @@ export async function getTask(id: number) {
 export async function updateTask(id: number, payload: UpdateTaskPayload) {
   const task = tasks.find((item) => item.id === id);
   if (!task) throw new Error("Задача не найдена.");
-
-  if (payload.status !== "rejected") {
-    task.status = payload.status as TaskStatus;
-  } else {
-    task.status = "waiting";
-  }
-
+  task.status = payload.status !== "rejected" ? (payload.status as TaskStatus) : "waiting";
   task.actual_quantity = addDecimal(task.actual_quantity, payload.actual_quantity_delta);
   task.defect_quantity = addDecimal(task.defect_quantity, payload.defect_quantity_delta);
   task.updated_at = currentIso();
-
   return delay(task);
 }
 
@@ -456,7 +401,6 @@ export async function getOrder(id: number) {
 
 export async function createOrder(payload: CreateOrderPayload) {
   if (!payload.lines.length) throw new Error("Добавьте хотя бы одну строку заказа.");
-
   const order: OrderDto = {
     id: nextId(orders),
     number: payload.number,
@@ -464,18 +408,11 @@ export async function createOrder(payload: CreateOrderPayload) {
     created_at: currentIso(),
     updated_at: currentIso(),
     lines: payload.lines.map((line, index) => {
-      findActiveItem(Number(line.item_id));
-      findActiveRoute(Number(line.route_id));
-      return {
-        id: index + 1,
-        item_id: Number(line.item_id),
-        route_id: Number(line.route_id),
-        bom_id: line.bom_id ? Number(line.bom_id) : null,
-        quantity: decimal(line.quantity),
-      };
+      const item = findActiveItem(Number(line.item_id));
+      if (!item.resource_specification) throw new Error(`Нет ресурсной спецификации: ${item.name}`);
+      return { id: index + 1, item_id: item.id, quantity: decimal(line.quantity) };
     }),
   };
-
   orders = [order, ...orders];
   createTasksForOrder(order);
   return delay(order);
@@ -483,99 +420,90 @@ export async function createOrder(payload: CreateOrderPayload) {
 
 function createTasksForOrder(order: OrderDto) {
   for (const line of order.lines) {
-    const route = findActiveRoute(line.route_id ?? 0);
+    const item = findActiveItem(line.item_id);
+    const specification = item.resource_specification;
+    if (!specification) continue;
+    const workstation = findWorkstation(specification.workstation_id);
     const quantity = Number(line.quantity);
 
-    for (const operation of route.operations) {
-      const outputItem = operation.outputs[0]?.item ?? route.item;
-      const workCenter = findActiveWorkstation(operation.workstation_id);
-
-      for (const input of operation.inputs) {
-        const inputItem = findActiveItem(input.item_id);
-        tasks.push({
-          id: nextId(tasks),
-          task_type: "warehouse_delivery",
-          status: "to_do",
-          description: `Доставить материалы: ${operation.operation_number}`,
-          planned_quantity: decimal(Number(input.quantity) * quantity),
-          actual_quantity: "0.000000",
-          defect_quantity: "0.000000",
-          order_id: order.id,
-          order_line_id: line.id,
-          item_id: input.item_id,
-          route_operation_id: operation.id,
-          workstation_id: operation.workstation_id,
-          source_workstation_id: null,
-          target_workstation_id: operation.workstation_id,
-          item: toTaskItem(inputItem),
-          workstation: toTaskWorkstation(workCenter),
-          source_workstation: null,
-          target_workstation: toTaskWorkstation(workCenter),
-          executor_id: null,
-          created_at: currentIso(),
-          updated_at: currentIso(),
-        });
-      }
-
+    for (const input of specification.inputs) {
+      const inputItem = findActiveItem(input.item_id);
       tasks.push({
         id: nextId(tasks),
-        task_type: "operation",
+        task_type: "warehouse_delivery",
         status: "to_do",
-        description: operation.name,
-        planned_quantity: decimal((Number(operation.outputs[0]?.quantity ?? 1) || 1) * quantity),
+        description: `Доставить материалы: ${inputItem.name}`,
+        planned_quantity: decimal(Number(input.quantity) * quantity),
         actual_quantity: "0.000000",
         defect_quantity: "0.000000",
         order_id: order.id,
         order_line_id: line.id,
-        item_id: outputItem.id,
-        route_operation_id: operation.id,
-        workstation_id: operation.workstation_id,
+        item_id: input.item_id,
+        resource_specification_id: specification.id,
+        workstation_id: specification.workstation_id,
         source_workstation_id: null,
-        target_workstation_id: null,
-        item: { id: outputItem.id, name: outputItem.name, unit_id: outputItem.unit_id },
-        workstation: toTaskWorkstation(workCenter),
+        target_workstation_id: specification.workstation_id,
+        item: toTaskItem(inputItem),
+        workstation: toTaskWorkstation(workstation),
         source_workstation: null,
-        target_workstation: null,
+        target_workstation: toTaskWorkstation(workstation),
         executor_id: null,
         created_at: currentIso(),
         updated_at: currentIso(),
       });
-
-      if (operation.requires_quality_review) {
-        tasks.push({
-          id: nextId(tasks),
-          task_type: "quality_review",
-          status: "waiting",
-          description: `Контроль качества: ${operation.operation_number}`,
-          planned_quantity: decimal(quantity),
-          actual_quantity: "0.000000",
-          defect_quantity: "0.000000",
-          order_id: order.id,
-          order_line_id: line.id,
-          item_id: outputItem.id,
-          route_operation_id: operation.id,
-          workstation_id: operation.workstation_id,
-          source_workstation_id: null,
-          target_workstation_id: null,
-          item: { id: outputItem.id, name: outputItem.name, unit_id: outputItem.unit_id },
-          workstation: toTaskWorkstation(workCenter),
-          source_workstation: null,
-          target_workstation: null,
-          executor_id: null,
-          created_at: currentIso(),
-          updated_at: currentIso(),
-        });
-      }
     }
+
+    tasks.push({
+      id: nextId(tasks),
+      task_type: "operation",
+      status: "to_do",
+      description: specification.name,
+      planned_quantity: decimal(quantity),
+      actual_quantity: "0.000000",
+      defect_quantity: "0.000000",
+      order_id: order.id,
+      order_line_id: line.id,
+      item_id: item.id,
+      resource_specification_id: specification.id,
+      workstation_id: specification.workstation_id,
+      source_workstation_id: null,
+      target_workstation_id: null,
+      item: toTaskItem(item),
+      workstation: toTaskWorkstation(workstation),
+      source_workstation: null,
+      target_workstation: null,
+      executor_id: null,
+      created_at: currentIso(),
+      updated_at: currentIso(),
+    });
+
+    tasks.push({
+      id: nextId(tasks),
+      task_type: "warehouse_delivery",
+      status: "to_do",
+      description: `Доставить готовое на склад: ${item.name}`,
+      planned_quantity: decimal(quantity),
+      actual_quantity: "0.000000",
+      defect_quantity: "0.000000",
+      order_id: order.id,
+      order_line_id: line.id,
+      item_id: item.id,
+      resource_specification_id: specification.id,
+      workstation_id: specification.workstation_id,
+      source_workstation_id: specification.workstation_id,
+      target_workstation_id: null,
+      item: toTaskItem(item),
+      workstation: toTaskWorkstation(workstation),
+      source_workstation: toTaskWorkstation(workstation),
+      target_workstation: null,
+      executor_id: null,
+      created_at: currentIso(),
+      updated_at: currentIso(),
+    });
   }
 }
 
-export async function getCatalog<R extends CatalogResource>(
-  resource: R,
-  page = 1,
-  size = 20,
-  includeDeleted = false,
-) {
+export async function getCatalog<R extends CatalogResource>(resource: R, page = 1, size = 20, includeDeleted = false) {
   return delay(toList(activeFilter(getCatalogStore(resource), includeDeleted), page, size));
 }
 
@@ -591,15 +519,10 @@ export async function createCatalogItem<R extends CatalogResource>(resource: R, 
   return delay(created);
 }
 
-export async function updateCatalogItem<R extends CatalogResource>(
-  resource: R,
-  id: number,
-  payload: CatalogUpdatePayloadMap[R],
-) {
+export async function updateCatalogItem<R extends CatalogResource>(resource: R, id: number, payload: CatalogUpdatePayloadMap[R]) {
   const store = getCatalogStore(resource);
   const index = store.findIndex((item) => item.id === id && !isDeleted(item));
   if (index < 0) throw new Error("Запись справочника не найдена.");
-
   const updated = buildCatalogItem(resource, { ...store[index], ...payload, id } as CatalogPayloadMap[R] & { id: number });
   store[index] = updated;
   setCatalogStore(resource, store);
@@ -617,69 +540,25 @@ export async function deleteCatalogItem<R extends CatalogResource>(resource: R, 
   return delay(undefined);
 }
 
-function buildCatalogItem<R extends CatalogResource>(resource: R, payload: CatalogPayloadMap[R] & { id?: number }): CatalogDtoMap[R] {
-  const timestamp = currentIso();
-  const base = {
-    id: payload.id ?? nextId(getCatalogStore(resource)),
-    created_at: "created_at" in payload && typeof payload.created_at === "string" ? payload.created_at : timestamp,
-    updated_at: timestamp,
-    deleted_at: null,
-  };
+export async function createResourceSpecification(itemId: number, payload: ResourceSpecificationPayload) {
+  const item = findActiveItem(itemId);
+  if (item.resource_specification) throw new Error("Ресурсная спецификация уже есть.");
+  const conflictId = detectCycle(itemId, payload.inputs.map((input) => Number(input.item_id)));
+  if (conflictId) throwCycleConflict(conflictId);
+  item.resource_specification = buildResourceSpecification(Date.now(), itemId, payload);
+  item.updated_at = currentIso();
+  return delay(item);
+}
 
-  if (resource === "units") {
-    return { ...base, name: String(payload.name), symbol: String((payload as CatalogPayloadMap["units"]).symbol) } as CatalogDtoMap[R];
-  }
-
-  if (resource === "items") {
-    const data = payload as CatalogPayloadMap["items"];
-    const unit = units.find((candidate) => candidate.id === Number(data.unit_id) && !candidate.deleted_at);
-    if (!unit) throw new Error("Единица измерения не найдена.");
-    return {
-      ...base,
-      name: data.name,
-      unit_id: Number(data.unit_id),
-      unit: toUnitSummary(unit),
-      description: data.description ?? null,
-    } as CatalogDtoMap[R];
-  }
-
-  if (resource === "workstations") {
-    const data = payload as CatalogPayloadMap["workstations"];
-    return { id: payload.id ?? nextId(workstations), name: data.name } as CatalogDtoMap[R];
-  }
-
-  if (resource === "operation-types") {
-    const data = payload as CatalogPayloadMap["operation-types"];
-    return { id: payload.id ?? nextId(operationTypes), name: data.name } as CatalogDtoMap[R];
-  }
-
-  if (resource === "boms") {
-    const data = payload as CatalogPayloadMap["boms"];
-    const item = findActiveItem(Number(data.item_id));
-    return {
-      ...base,
-      item_id: Number(data.item_id),
-      item: toItemSummary(item),
-      name: data.name,
-      version: data.version,
-      status: data.status,
-      is_default: data.is_default,
-      lines: buildBomLines(data.lines ?? []),
-    } as CatalogDtoMap[R];
-  }
-
-  const data = payload as CatalogPayloadMap["routes"];
-  const item = findActiveItem(Number(data.item_id));
-  return {
-    ...base,
-    item_id: Number(data.item_id),
-    item: toItemSummary(item),
-    name: data.name,
-    version: data.version,
-    status: data.status,
-    is_default: data.is_default,
-    operations: buildRouteOperations(data.operations ?? []),
-  } as CatalogDtoMap[R];
+export async function updateResourceSpecification(itemId: number, payload: ResourceSpecificationUpdatePayload) {
+  const item = findActiveItem(itemId);
+  if (!item.resource_specification) throw new Error("Ресурсная спецификация не найдена.");
+  const nextPayload = { ...item.resource_specification, ...payload } as ResourceSpecificationPayload;
+  const conflictId = detectCycle(itemId, nextPayload.inputs.map((input) => Number(input.item_id)));
+  if (conflictId) throwCycleConflict(conflictId);
+  item.resource_specification = buildResourceSpecification(item.resource_specification.id, itemId, nextPayload);
+  item.updated_at = currentIso();
+  return delay(item);
 }
 
 export async function getAdminUsers(page = 1, size = 20) {
@@ -695,7 +574,6 @@ export async function createAdminUser(payload: CreateUserPayload) {
     role: payload.role,
     workstations: [],
   };
-
   users = [next, ...users];
   return delay(next);
 }
@@ -703,12 +581,10 @@ export async function createAdminUser(payload: CreateUserPayload) {
 export async function updateAdminUser(id: number, payload: UpdateUserPayload) {
   const user = users.find((item) => item.id === id);
   if (!user) throw new Error("Пользователь не найден.");
-
   if (payload.role) user.role = payload.role;
   if (payload.workstation_ids !== undefined) {
     user.workstations = workstations.filter((workstation) => payload.workstation_ids?.includes(workstation.id));
   }
-
   return delay(user);
 }
 

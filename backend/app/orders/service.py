@@ -7,10 +7,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models.bom import Bom
 from app.db.models.item import Item
 from app.db.models.order import Order, OrderLine
-from app.db.models.route import OperationInput, OperationOutput, Route, RouteOperation
+from app.db.models.resource_specification import (
+    ResourceSpecification,
+    ResourceSpecificationInput,
+)
 from app.db.models.task import Task, TaskDependency
 from app.orders.schema import CreateOrderRequest
 from app.tasks.service import activate_ready_tasks
@@ -20,10 +22,13 @@ def order_options():
     return [selectinload(Order.lines)]
 
 
-def route_options():
+def specification_options():
     return [
-        selectinload(Route.operations).selectinload(RouteOperation.inputs),
-        selectinload(Route.operations).selectinload(RouteOperation.outputs),
+        selectinload(ResourceSpecification.inputs).selectinload(
+            ResourceSpecificationInput.item
+        ),
+        selectinload(ResourceSpecification.operation_type),
+        selectinload(ResourceSpecification.workstation),
     ]
 
 
@@ -37,67 +42,16 @@ async def get_active_item(session: AsyncSession, item_id: int) -> Item:
     return item
 
 
-async def get_active_route(session: AsyncSession, route_id: int) -> Route:
+async def get_specification_for_item(
+    session: AsyncSession,
+    item_id: int,
+) -> ResourceSpecification | None:
     result = await session.execute(
-        select(Route)
-        .options(*route_options())
-        .where(Route.id == route_id, Route.deleted_at.is_(None))
-    )
-    route = result.scalar_one_or_none()
-    if route is None:
-        raise HTTPException(status_code=404, detail=f"Route not found: {route_id}")
-    if route.status != "active":
-        raise HTTPException(status_code=409, detail=f"Route is not active: {route_id}")
-    return route
-
-
-async def get_active_bom(session: AsyncSession, bom_id: int) -> Bom:
-    result = await session.execute(
-        select(Bom).where(Bom.id == bom_id, Bom.deleted_at.is_(None))
-    )
-    bom = result.scalar_one_or_none()
-    if bom is None:
-        raise HTTPException(status_code=404, detail=f"BOM not found: {bom_id}")
-    if bom.status != "active":
-        raise HTTPException(status_code=409, detail=f"BOM is not active: {bom_id}")
-    return bom
-
-
-async def get_default_bom_id(session: AsyncSession, item_id: int) -> int | None:
-    result = await session.execute(
-        select(Bom.id).where(
-            Bom.item_id == item_id,
-            Bom.deleted_at.is_(None),
-            Bom.status == "active",
-            Bom.is_default.is_(True),
-        )
+        select(ResourceSpecification)
+        .options(*specification_options())
+        .where(ResourceSpecification.item_id == item_id)
     )
     return result.scalar_one_or_none()
-
-
-async def item_has_active_route(session: AsyncSession, item_id: int) -> bool:
-    result = await session.execute(
-        select(Route.id)
-        .where(
-            Route.item_id == item_id,
-            Route.deleted_at.is_(None),
-            Route.status == "active",
-        )
-        .limit(1)
-    )
-    return result.scalar_one_or_none() is not None
-
-
-def output_item_id(operation: RouteOperation, fallback_item_id: int) -> int:
-    if operation.outputs:
-        return operation.outputs[0].item_id
-    return fallback_item_id
-
-
-def output_quantity(operation: RouteOperation, order_quantity: Decimal) -> Decimal:
-    if operation.outputs:
-        return operation.outputs[0].quantity * order_quantity
-    return order_quantity
 
 
 async def add_dependency(
@@ -115,115 +69,131 @@ async def add_dependency(
     )
 
 
-async def create_tasks_for_order_line(
+async def create_tasks_for_item(
     session: AsyncSession,
     order: Order,
     line: OrderLine,
-    route: Route,
-) -> None:
-    operations = sorted(route.operations, key=lambda operation: operation.operation_number)
-    if not operations:
-        raise HTTPException(status_code=422, detail="Route has no operations")
+    item_id: int,
+    required_quantity: Decimal,
+    stack: set[int],
+) -> tuple[Task | None, int | None]:
+    if item_id in stack:
+        raise HTTPException(status_code=409, detail="Cyclic resource specification dependency detected")
 
-    previous_stage_task: Task | None = None
+    specification = await get_specification_for_item(session, item_id)
+    if specification is None:
+        return None, None
 
-    for index, operation in enumerate(operations):
-        raw_delivery_tasks: list[Task] = []
-        raw_inputs = []
-        for operation_input in operation.inputs:
-            if not await item_has_active_route(session, operation_input.item_id):
-                raw_inputs.append(operation_input)
+    stack.add(item_id)
+    multiplier = required_quantity / Decimal(specification.output_quantity)
+    dependency_tasks: list[Task] = []
 
-        for operation_input in raw_inputs:
+    for specification_input in specification.inputs:
+        input_quantity = specification_input.quantity * multiplier
+        upstream_task, upstream_workstation_id = await create_tasks_for_item(
+            session,
+            order,
+            line,
+            specification_input.item_id,
+            input_quantity,
+            stack,
+        )
+
+        if upstream_task is not None:
+            dependency = upstream_task
+            if (
+                upstream_workstation_id is not None
+                and upstream_workstation_id != specification.workstation_id
+            ):
+                dependency = Task(
+                    task_type="transfer",
+                    status="waiting",
+                    description=f"Доставить {specification_input.item.name}",
+                    planned_quantity=input_quantity,
+                    actual_quantity=Decimal("0"),
+                    defect_quantity=Decimal("0"),
+                    order_id=order.id,
+                    order_line_id=line.id,
+                    resource_specification_id=specification.id,
+                    item_id=specification_input.item_id,
+                    workstation_id=specification.workstation_id,
+                    source_workstation_id=upstream_workstation_id,
+                    target_workstation_id=specification.workstation_id,
+                )
+                session.add(dependency)
+                await session.flush()
+                await add_dependency(session, dependency, upstream_task)
+            dependency_tasks.append(dependency)
+        else:
             delivery_task = Task(
                 task_type="warehouse_delivery",
                 status="waiting",
-                description=f"Доставить материалы: {operation.operation_number}",
-                planned_quantity=operation_input.quantity * line.quantity,
+                description=f"Доставить материалы: {specification_input.item.name}",
+                planned_quantity=input_quantity,
                 actual_quantity=Decimal("0"),
                 defect_quantity=Decimal("0"),
                 order_id=order.id,
                 order_line_id=line.id,
-                route_operation_id=operation.id,
-                item_id=operation_input.item_id,
-                workstation_id=operation.workstation_id,
-                target_workstation_id=operation.workstation_id,
+                resource_specification_id=specification.id,
+                item_id=specification_input.item_id,
+                workstation_id=specification.workstation_id,
+                target_workstation_id=specification.workstation_id,
             )
             session.add(delivery_task)
             await session.flush()
-            if previous_stage_task is not None:
-                await add_dependency(session, delivery_task, previous_stage_task)
-            raw_delivery_tasks.append(delivery_task)
+            dependency_tasks.append(delivery_task)
 
-        operation_task = Task(
-            task_type="operation",
-            status="waiting",
-            description=operation.name,
-            planned_quantity=output_quantity(operation, line.quantity),
-            actual_quantity=Decimal("0"),
-            defect_quantity=Decimal("0"),
-            order_id=order.id,
-            order_line_id=line.id,
-            route_operation_id=operation.id,
-            item_id=output_item_id(operation, line.item_id),
-            workstation_id=operation.workstation_id,
-        )
-        session.add(operation_task)
-        await session.flush()
+    operation_task = Task(
+        task_type="operation",
+        status="waiting",
+        description=specification.name,
+        planned_quantity=required_quantity,
+        actual_quantity=Decimal("0"),
+        defect_quantity=Decimal("0"),
+        order_id=order.id,
+        order_line_id=line.id,
+        resource_specification_id=specification.id,
+        item_id=specification.item_id,
+        workstation_id=specification.workstation_id,
+    )
+    session.add(operation_task)
+    await session.flush()
 
-        await add_dependency(session, operation_task, previous_stage_task)
-        for delivery_task in raw_delivery_tasks:
-            await add_dependency(session, operation_task, delivery_task)
+    for dependency_task in dependency_tasks:
+        await add_dependency(session, operation_task, dependency_task)
 
-        stage_task: Task = operation_task
-        if operation.requires_quality_review:
-            quality_task = Task(
-                task_type="quality_review",
-                status="waiting",
-                description=f"Контроль качества: {operation.operation_number}",
-                planned_quantity=operation_task.planned_quantity,
-                actual_quantity=Decimal("0"),
-                defect_quantity=Decimal("0"),
-                order_id=order.id,
-                order_line_id=line.id,
-                route_operation_id=operation.id,
-                item_id=operation_task.item_id,
-                workstation_id=operation.workstation_id,
-            )
-            session.add(quality_task)
-            await session.flush()
-            await add_dependency(session, quality_task, operation_task)
-            stage_task = quality_task
+    stack.remove(item_id)
+    return operation_task, specification.workstation_id
 
-        next_operation = operations[index + 1] if index + 1 < len(operations) else None
-        if (
-            next_operation is not None
-            and operation.workstation_id != next_operation.workstation_id
-        ):
-            transfer_task = Task(
-                task_type="transfer",
-                status="waiting",
-                description=(
-                    f"Move result from operation {operation.operation_number} "
-                    f"to {next_operation.operation_number}"
-                ),
-                planned_quantity=operation_task.planned_quantity,
-                actual_quantity=Decimal("0"),
-                defect_quantity=Decimal("0"),
-                order_id=order.id,
-                order_line_id=line.id,
-                route_operation_id=next_operation.id,
-                item_id=operation_task.item_id,
-                workstation_id=next_operation.workstation_id,
-                source_workstation_id=operation.workstation_id,
-                target_workstation_id=next_operation.workstation_id,
-            )
-            session.add(transfer_task)
-            await session.flush()
-            await add_dependency(session, transfer_task, stage_task)
-            previous_stage_task = transfer_task
-        else:
-            previous_stage_task = stage_task
+
+async def create_finished_goods_delivery(
+    session: AsyncSession,
+    order: Order,
+    line: OrderLine,
+    item: Item,
+    operation_task: Task,
+    workstation_id: int | None,
+) -> None:
+    if workstation_id is None:
+        return
+
+    delivery_task = Task(
+        task_type="warehouse_delivery",
+        status="waiting",
+        description=f"Доставить готовое на склад: {item.name}",
+        planned_quantity=line.quantity,
+        actual_quantity=Decimal("0"),
+        defect_quantity=Decimal("0"),
+        order_id=order.id,
+        order_line_id=line.id,
+        resource_specification_id=operation_task.resource_specification_id,
+        item_id=item.id,
+        workstation_id=workstation_id,
+        source_workstation_id=workstation_id,
+    )
+    session.add(delivery_task)
+    await session.flush()
+    await add_dependency(session, delivery_task, operation_task)
 
 
 async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Order:
@@ -237,42 +207,40 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
     session.add(order)
     await session.flush()
 
-    routes_by_line: dict[int, Route] = {}
     for line_payload in payload.lines:
-        await get_active_item(session, line_payload.item_id)
-        route = await get_active_route(session, line_payload.route_id)
-        if route.item_id != line_payload.item_id:
+        item = await get_active_item(session, line_payload.item_id)
+        if await get_specification_for_item(session, line_payload.item_id) is None:
             raise HTTPException(
                 status_code=422,
-                detail="Route item_id does not match order line item_id",
+                detail="Order line item has no resource specification",
             )
-
-        bom_id = line_payload.bom_id
-        if bom_id is not None:
-            bom = await get_active_bom(session, bom_id)
-            if bom.item_id != line_payload.item_id:
-                raise HTTPException(
-                    status_code=422,
-                    detail="BOM item_id does not match order line item_id",
-                )
-        else:
-            bom_id = await get_default_bom_id(session, line_payload.item_id)
 
         line = OrderLine(
             order_id=order.id,
             item_id=line_payload.item_id,
-            route_id=line_payload.route_id,
-            bom_id=bom_id,
             quantity=line_payload.quantity,
         )
         session.add(line)
         await session.flush()
-        routes_by_line[line.id] = route
+        operation_task, workstation_id = await create_tasks_for_item(
+            session,
+            order,
+            line,
+            line.item_id,
+            line.quantity,
+            set(),
+        )
+        if operation_task is not None:
+            await create_finished_goods_delivery(
+                session,
+                order,
+                line,
+                item,
+                operation_task,
+                workstation_id,
+            )
 
     await session.refresh(order, attribute_names=["lines"])
-    for line in order.lines:
-        await create_tasks_for_order_line(session, order, line, routes_by_line[line.id])
-
     await activate_ready_tasks(session)
     await session.flush()
     return await get_order_by_id(session, order.id)

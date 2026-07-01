@@ -13,6 +13,8 @@ import type {
   LoginPayload,
   MeDto,
   OrderDto,
+  ResourceSpecificationPayload,
+  ResourceSpecificationUpdatePayload,
   TaskDto,
   UpdateTaskPayload,
   UpdateUserPayload,
@@ -65,6 +67,14 @@ apiClient.interceptors.response.use(
 
 function formatValidationDetail(detail: unknown) {
   if (typeof detail === "string") return detail;
+
+  if (typeof detail === "object" && detail !== null) {
+    const issue = detail as { message?: unknown; item_name?: unknown };
+    if (typeof issue.message === "string" && typeof issue.item_name === "string") {
+      return `${issue.message}: ${issue.item_name}`;
+    }
+    if (typeof issue.message === "string") return issue.message;
+  }
 
   if (Array.isArray(detail)) {
     return detail
@@ -188,6 +198,24 @@ export async function updateCatalogItem<R extends CatalogResource>(
 ) {
   if (useMockApi) return mockApi.updateCatalogItem(resource, id, payload);
   const response = await apiClient.patch<CatalogDtoMap[R]>(`/api/v1/catalogs/${resource}/${id}`, payload);
+  return response.data;
+}
+
+export async function createResourceSpecification(itemId: number, payload: ResourceSpecificationPayload) {
+  if (useMockApi) return mockApi.createResourceSpecification(itemId, payload);
+  const response = await apiClient.post<CatalogDtoMap["items"]>(
+    `/api/v1/catalogs/items/${itemId}/resource-specification`,
+    payload,
+  );
+  return response.data;
+}
+
+export async function updateResourceSpecification(itemId: number, payload: ResourceSpecificationUpdatePayload) {
+  if (useMockApi) return mockApi.updateResourceSpecification(itemId, payload);
+  const response = await apiClient.patch<CatalogDtoMap["items"]>(
+    `/api/v1/catalogs/items/${itemId}/resource-specification`,
+    payload,
+  );
   return response.data;
 }
 

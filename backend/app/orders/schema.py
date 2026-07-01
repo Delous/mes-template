@@ -8,8 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class CreateOrderLineRequest(BaseModel):
     item_id: int = Field(gt=0)
-    route_id: int = Field(gt=0)
-    bom_id: int | None = Field(default=None, gt=0)
     quantity: Decimal = Field(gt=0, max_digits=18, decimal_places=6)
 
 
@@ -23,8 +21,6 @@ class CreateOrderRequest(BaseModel):
 class OrderLineResponse(BaseModel):
     id: int
     item_id: int
-    route_id: int | None
-    bom_id: int | None
     quantity: Decimal
 
     model_config = ConfigDict(from_attributes=True)

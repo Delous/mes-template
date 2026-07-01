@@ -9,8 +9,6 @@ const links = [
   { href: "/catalogs/items", label: "Номенклатура" },
   { href: "/catalogs/workstations", label: "Рабочие посты" },
   { href: "/catalogs/operation-types", label: "Типы операций" },
-  { href: "/catalogs/boms", label: "BOM" },
-  { href: "/catalogs/routes", label: "Маршруты" },
 ];
 
 export function CatalogNav() {

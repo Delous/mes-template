@@ -106,114 +106,47 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('workstation_id', 'user_id')
     )
-    op.create_table('boms',
+    op.create_table('resource_specifications',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('item_id', sa.BigInteger(), nullable=False),
     sa.Column('name', sa.Text(), nullable=False),
-    sa.Column('version', sa.Text(), nullable=False),
-    sa.Column('status', sa.Text(), nullable=False),
-    sa.Column('is_default', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('operation_type_id', sa.BigInteger(), nullable=False),
+    sa.Column('workstation_id', sa.BigInteger(), nullable=False),
+    sa.Column('output_quantity', sa.Integer(), nullable=False),
+    sa.CheckConstraint('output_quantity >= 1', name='ck_resource_specifications_output_quantity_positive'),
     sa.ForeignKeyConstraint(['item_id'], ['items.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['operation_type_id'], ['operation_types.id'], ),
+    sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('item_id', 'version', name='uq_boms_item_id_version')
+    sa.UniqueConstraint('item_id', name='uq_resource_specifications_item_id')
     )
-    op.create_index('ix_boms_is_default', 'boms', ['is_default'], unique=False)
-    op.create_index('ix_boms_item_id', 'boms', ['item_id'], unique=False)
-    op.create_index('ix_boms_status', 'boms', ['status'], unique=False)
-    op.create_table('routes',
+    op.create_index('ix_resource_specifications_item_id', 'resource_specifications', ['item_id'], unique=False)
+    op.create_index('ix_resource_specifications_operation_type_id', 'resource_specifications', ['operation_type_id'], unique=False)
+    op.create_index('ix_resource_specifications_workstation_id', 'resource_specifications', ['workstation_id'], unique=False)
+    op.create_table('resource_specification_inputs',
     sa.Column('id', sa.BigInteger(), nullable=False),
+    sa.Column('resource_specification_id', sa.BigInteger(), nullable=False),
     sa.Column('item_id', sa.BigInteger(), nullable=False),
-    sa.Column('name', sa.Text(), nullable=False),
-    sa.Column('version', sa.Text(), nullable=False),
-    sa.Column('status', sa.Text(), nullable=False),
-    sa.Column('is_default', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('item_id', 'version', name='uq_routes_item_id_version')
-    )
-    op.create_index('ix_routes_is_default', 'routes', ['is_default'], unique=False)
-    op.create_index('ix_routes_item_id', 'routes', ['item_id'], unique=False)
-    op.create_index('ix_routes_status', 'routes', ['status'], unique=False)
-    op.create_table('bom_lines',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('bom_id', sa.BigInteger(), nullable=False),
-    sa.Column('component_item_id', sa.BigInteger(), nullable=False),
     sa.Column('quantity', sa.Numeric(precision=18, scale=6), nullable=False),
-    sa.Column('scrap_percent', sa.Numeric(precision=5, scale=2), nullable=False),
-    sa.CheckConstraint('quantity > 0', name='ck_bom_lines_quantity_positive'),
-    sa.CheckConstraint('scrap_percent >= 0 AND scrap_percent <= 100', name='ck_bom_lines_scrap_percent_range'),
-    sa.ForeignKeyConstraint(['bom_id'], ['boms.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['component_item_id'], ['items.id'], ),
+    sa.CheckConstraint('quantity > 0', name='ck_resource_specification_inputs_quantity_positive'),
+    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
+    sa.ForeignKeyConstraint(['resource_specification_id'], ['resource_specifications.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_bom_lines_bom_id', 'bom_lines', ['bom_id'], unique=False)
-    op.create_index('ix_bom_lines_component_item_id', 'bom_lines', ['component_item_id'], unique=False)
+    op.create_index('ix_resource_specification_inputs_item_id', 'resource_specification_inputs', ['item_id'], unique=False)
+    op.create_index('ix_resource_specification_inputs_resource_specification_id', 'resource_specification_inputs', ['resource_specification_id'], unique=False)
     op.create_table('order_lines',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('order_id', sa.BigInteger(), nullable=False),
     sa.Column('item_id', sa.BigInteger(), nullable=False),
     sa.Column('quantity', sa.Numeric(precision=18, scale=6), nullable=False),
-    sa.Column('bom_id', sa.BigInteger(), nullable=True),
-    sa.Column('route_id', sa.BigInteger(), nullable=True),
     sa.CheckConstraint('quantity > 0', name='ck_order_lines_quantity_positive'),
-    sa.ForeignKeyConstraint(['bom_id'], ['boms.id'], ),
     sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_order_lines_bom_id', 'order_lines', ['bom_id'], unique=False)
     op.create_index('ix_order_lines_item_id', 'order_lines', ['item_id'], unique=False)
     op.create_index('ix_order_lines_order_id', 'order_lines', ['order_id'], unique=False)
-    op.create_index('ix_order_lines_route_id', 'order_lines', ['route_id'], unique=False)
-    op.create_table('route_operations',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('route_id', sa.BigInteger(), nullable=False),
-    sa.Column('operation_number', sa.Integer(), nullable=False),
-    sa.Column('name', sa.Text(), nullable=False),
-    sa.Column('workstation_id', sa.BigInteger(), nullable=False),
-    sa.Column('setup_time_minutes', sa.Integer(), nullable=False),
-    sa.Column('run_time_minutes', sa.Integer(), nullable=False),
-    sa.Column('requires_quality_review', sa.Boolean(), nullable=False),
-    sa.CheckConstraint('run_time_minutes >= 0', name='ck_route_operations_run_time_minutes_non_negative'),
-    sa.CheckConstraint('setup_time_minutes >= 0', name='ck_route_operations_setup_time_minutes_non_negative'),
-    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('route_id', 'operation_number', name='uq_route_operations_route_id_operation_number')
-    )
-    op.create_index('ix_route_operations_route_id', 'route_operations', ['route_id'], unique=False)
-    op.create_index('ix_route_operations_workstation_id', 'route_operations', ['workstation_id'], unique=False)
-    op.create_table('operation_inputs',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('operation_id', sa.BigInteger(), nullable=False),
-    sa.Column('item_id', sa.BigInteger(), nullable=False),
-    sa.Column('quantity', sa.Numeric(precision=18, scale=6), nullable=False),
-    sa.CheckConstraint('quantity > 0', name='ck_operation_inputs_quantity_positive'),
-    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
-    sa.ForeignKeyConstraint(['operation_id'], ['route_operations.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_operation_inputs_item_id', 'operation_inputs', ['item_id'], unique=False)
-    op.create_index('ix_operation_inputs_operation_id', 'operation_inputs', ['operation_id'], unique=False)
-    op.create_table('operation_outputs',
-    sa.Column('id', sa.BigInteger(), nullable=False),
-    sa.Column('operation_id', sa.BigInteger(), nullable=False),
-    sa.Column('item_id', sa.BigInteger(), nullable=False),
-    sa.Column('quantity', sa.Numeric(precision=18, scale=6), nullable=False),
-    sa.CheckConstraint('quantity > 0', name='ck_operation_outputs_quantity_positive'),
-    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
-    sa.ForeignKeyConstraint(['operation_id'], ['route_operations.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_operation_outputs_item_id', 'operation_outputs', ['item_id'], unique=False)
-    op.create_index('ix_operation_outputs_operation_id', 'operation_outputs', ['operation_id'], unique=False)
     op.create_table('tasks',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('task_type', sa.Text(), nullable=False),
@@ -225,7 +158,7 @@ def upgrade() -> None:
     sa.Column('item_id', sa.BigInteger(), nullable=False),
     sa.Column('order_id', sa.BigInteger(), nullable=False),
     sa.Column('order_line_id', sa.BigInteger(), nullable=False),
-    sa.Column('route_operation_id', sa.BigInteger(), nullable=True),
+    sa.Column('resource_specification_id', sa.BigInteger(), nullable=True),
     sa.Column('workstation_id', sa.BigInteger(), nullable=True),
     sa.Column('source_workstation_id', sa.BigInteger(), nullable=True),
     sa.Column('target_workstation_id', sa.BigInteger(), nullable=True),
@@ -236,7 +169,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
     sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['order_line_id'], ['order_lines.id'], ),
-    sa.ForeignKeyConstraint(['route_operation_id'], ['route_operations.id'], ),
+    sa.ForeignKeyConstraint(['resource_specification_id'], ['resource_specifications.id'], ),
     sa.ForeignKeyConstraint(['source_workstation_id'], ['workstations.id'], ),
     sa.ForeignKeyConstraint(['target_workstation_id'], ['workstations.id'], ),
     sa.ForeignKeyConstraint(['workstation_id'], ['workstations.id'], ),
@@ -244,6 +177,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_tasks_order_id', 'tasks', ['order_id'], unique=False)
     op.create_index('ix_tasks_order_line_id', 'tasks', ['order_line_id'], unique=False)
+    op.create_index('ix_tasks_resource_specification_id', 'tasks', ['resource_specification_id'], unique=False)
     op.create_index('ix_tasks_status', 'tasks', ['status'], unique=False)
     op.create_index('ix_tasks_task_type', 'tasks', ['task_type'], unique=False)
     op.create_index('ix_tasks_workstation_id', 'tasks', ['workstation_id'], unique=False)
@@ -285,34 +219,20 @@ def downgrade() -> None:
     op.drop_index('ix_tasks_workstation_id', table_name='tasks')
     op.drop_index('ix_tasks_task_type', table_name='tasks')
     op.drop_index('ix_tasks_status', table_name='tasks')
+    op.drop_index('ix_tasks_resource_specification_id', table_name='tasks')
     op.drop_index('ix_tasks_order_line_id', table_name='tasks')
     op.drop_index('ix_tasks_order_id', table_name='tasks')
     op.drop_table('tasks')
-    op.drop_index('ix_operation_outputs_operation_id', table_name='operation_outputs')
-    op.drop_index('ix_operation_outputs_item_id', table_name='operation_outputs')
-    op.drop_table('operation_outputs')
-    op.drop_index('ix_operation_inputs_operation_id', table_name='operation_inputs')
-    op.drop_index('ix_operation_inputs_item_id', table_name='operation_inputs')
-    op.drop_table('operation_inputs')
-    op.drop_index('ix_route_operations_workstation_id', table_name='route_operations')
-    op.drop_index('ix_route_operations_route_id', table_name='route_operations')
-    op.drop_table('route_operations')
-    op.drop_index('ix_order_lines_route_id', table_name='order_lines')
     op.drop_index('ix_order_lines_order_id', table_name='order_lines')
     op.drop_index('ix_order_lines_item_id', table_name='order_lines')
-    op.drop_index('ix_order_lines_bom_id', table_name='order_lines')
     op.drop_table('order_lines')
-    op.drop_index('ix_bom_lines_component_item_id', table_name='bom_lines')
-    op.drop_index('ix_bom_lines_bom_id', table_name='bom_lines')
-    op.drop_table('bom_lines')
-    op.drop_index('ix_routes_status', table_name='routes')
-    op.drop_index('ix_routes_item_id', table_name='routes')
-    op.drop_index('ix_routes_is_default', table_name='routes')
-    op.drop_table('routes')
-    op.drop_index('ix_boms_status', table_name='boms')
-    op.drop_index('ix_boms_item_id', table_name='boms')
-    op.drop_index('ix_boms_is_default', table_name='boms')
-    op.drop_table('boms')
+    op.drop_index('ix_resource_specification_inputs_resource_specification_id', table_name='resource_specification_inputs')
+    op.drop_index('ix_resource_specification_inputs_item_id', table_name='resource_specification_inputs')
+    op.drop_table('resource_specification_inputs')
+    op.drop_index('ix_resource_specifications_workstation_id', table_name='resource_specifications')
+    op.drop_index('ix_resource_specifications_operation_type_id', table_name='resource_specifications')
+    op.drop_index('ix_resource_specifications_item_id', table_name='resource_specifications')
+    op.drop_table('resource_specifications')
     op.drop_table('user_workstations')
     op.drop_index('ix_sensor_values_ts', table_name='sensor_values')
     op.drop_index('ix_sensor_values_sensor_id', table_name='sensor_values')

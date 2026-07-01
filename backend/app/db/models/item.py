@@ -2,9 +2,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.db.models.bom import Bom, BomLine
     from app.db.models.order import OrderLine
-    from app.db.models.route import OperationInput, OperationOutput, Route
+    from app.db.models.resource_specification import (
+        ResourceSpecification,
+        ResourceSpecificationInput,
+    )
     from app.db.models.task import Task
     from app.db.models.unit import Unit
 
@@ -30,28 +32,14 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
         back_populates="items",
     )
 
-    boms: Mapped[list["Bom"]] = relationship(
+    resource_specification: Mapped["ResourceSpecification | None"] = relationship(
         back_populates="item",
         cascade="all, delete-orphan",
         passive_deletes=True,
+        uselist=False,
     )
 
-    routes: Mapped[list["Route"]] = relationship(
-        back_populates="item",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
-    bom_component_lines: Mapped[list["BomLine"]] = relationship(
-        back_populates="component_item",
-        foreign_keys="BomLine.component_item_id",
-    )
-
-    operation_inputs: Mapped[list["OperationInput"]] = relationship(
-        back_populates="item",
-    )
-
-    operation_outputs: Mapped[list["OperationOutput"]] = relationship(
+    resource_specification_inputs: Mapped[list["ResourceSpecificationInput"]] = relationship(
         back_populates="item",
     )
 

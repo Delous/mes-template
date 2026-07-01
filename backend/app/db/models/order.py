@@ -2,9 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.db.models.bom import Bom
     from app.db.models.item import Item
-    from app.db.models.route import Route
     from app.db.models.task import Task
 
 from decimal import Decimal
@@ -60,28 +58,11 @@ class OrderLine(Base):
         nullable=False,
     )
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
-    bom_id: Mapped[int | None] = mapped_column(
-        ForeignKey("boms.id"),
-        nullable=True,
-    )
-    route_id: Mapped[int | None] = mapped_column(
-        ForeignKey("routes.id"),
-        nullable=True,
-    )
-
     order: Mapped["Order"] = relationship(
         back_populates="lines",
     )
 
     item: Mapped["Item"] = relationship(
-        back_populates="order_lines",
-    )
-
-    bom: Mapped["Bom | None"] = relationship(
-        back_populates="order_lines",
-    )
-
-    route: Mapped["Route | None"] = relationship(
         back_populates="order_lines",
     )
 
@@ -93,6 +74,4 @@ class OrderLine(Base):
         CheckConstraint("quantity > 0", name="ck_order_lines_quantity_positive"),
         Index("ix_order_lines_order_id", "order_id"),
         Index("ix_order_lines_item_id", "item_id"),
-        Index("ix_order_lines_bom_id", "bom_id"),
-        Index("ix_order_lines_route_id", "route_id"),
     )

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.db.models.item import Item
     from app.db.models.order import Order, OrderLine
-    from app.db.models.route import RouteOperation
+    from app.db.models.resource_specification import ResourceSpecification
     from app.db.models.task_history import TaskHistory
     from app.db.models.user import User
     from app.db.models.workstation import Workstation
@@ -54,8 +54,8 @@ class Task(Base, TimestampMixin):
         nullable=False,
     )
 
-    route_operation_id: Mapped[int | None] = mapped_column(
-        ForeignKey("route_operations.id"),
+    resource_specification_id: Mapped[int | None] = mapped_column(
+        ForeignKey("resource_specifications.id"),
         nullable=True,
     )
 
@@ -91,7 +91,7 @@ class Task(Base, TimestampMixin):
         back_populates="tasks",
     )
 
-    route_operation: Mapped["RouteOperation"] = relationship(
+    resource_specification: Mapped["ResourceSpecification | None"] = relationship(
         back_populates="tasks",
     )
 
@@ -136,6 +136,7 @@ class Task(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_tasks_order_id", "order_id"),
         Index("ix_tasks_order_line_id", "order_line_id"),
+        Index("ix_tasks_resource_specification_id", "resource_specification_id"),
         Index("ix_tasks_status", "status"),
         Index("ix_tasks_task_type", "task_type"),
         Index("ix_tasks_workstation_id", "workstation_id"),

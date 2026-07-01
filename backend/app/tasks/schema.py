@@ -62,7 +62,7 @@ class TaskResponse(BaseModel):
     order_id: int
     order_line_id: int
     item_id: int
-    route_operation_id: int | None
+    resource_specification_id: int | None
     workstation_id: int | None
     source_workstation_id: int | None
     target_workstation_id: int | None

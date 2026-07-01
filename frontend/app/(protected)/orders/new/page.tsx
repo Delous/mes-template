@@ -8,21 +8,17 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
 import { ErrorNotice, LoadingState, PageHeader, toDecimal } from "@/components/page-tools";
 import { createOrder, getCatalog, normalizeApiError } from "@/lib/api";
-import type { BomDto, ItemDto, OrderLinePayload, RouteDto } from "@/types/api";
+import type { ItemDto, OrderLinePayload } from "@/types/api";
 
 type DraftLine = {
   id: number;
   item_id: string;
-  route_id: string;
-  bom_id: string;
   quantity: string;
 };
 
 export default function NewOrderPage() {
   const router = useRouter();
   const [items, setItems] = useState<ItemDto[]>([]);
-  const [routes, setRoutes] = useState<RouteDto[]>([]);
-  const [boms, setBoms] = useState<BomDto[]>([]);
   const [lines, setLines] = useState<DraftLine[]>([newLine()]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -32,14 +28,8 @@ export default function NewOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const [itemResponse, routeResponse, bomResponse] = await Promise.all([
-        getCatalog("items", 1, 100),
-        getCatalog("routes", 1, 100),
-        getCatalog("boms", 1, 100),
-      ]);
-      setItems(itemResponse.items);
-      setRoutes(routeResponse.items.filter((route) => route.status === "active"));
-      setBoms(bomResponse.items.filter((bom) => bom.status === "active"));
+      const itemResponse = await getCatalog("items", 1, 100);
+      setItems(itemResponse.items.filter((item) => item.resource_specification));
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {
@@ -59,8 +49,6 @@ export default function NewOrderPage() {
     const formData = new FormData(event.currentTarget);
     const payloadLines: OrderLinePayload[] = lines.map((line) => ({
       item_id: Number(line.item_id),
-      route_id: Number(line.route_id),
-      bom_id: line.bom_id ? Number(line.bom_id) : null,
       quantity: toDecimal(formData.get(`quantity-${line.id}`)),
     }));
 
@@ -81,7 +69,7 @@ export default function NewOrderPage() {
     <div className="page-content">
       <PageHeader
         title="Новый заказ"
-        description="После создания backend построит связанные задачи."
+        description="После создания backend построит связанные задачи по ресурсным спецификациям."
         action={
           <Button asChild variant="soft" color="gray">
             <Link href="/orders">
@@ -120,10 +108,10 @@ export default function NewOrderPage() {
                       <Trash2 size={15} /> Удалить
                     </Button>
                   </Flex>
-                  <Grid columns={{ initial: "1", md: "4" }} gap="3">
+                  <Grid columns={{ initial: "1", md: "2" }} gap="3">
                     <label>
                       <Text size="2">Номенклатура</Text>
-                      <Select.Root value={line.item_id} onValueChange={(value) => updateLine(line.id, { item_id: value, route_id: "", bom_id: "" }, setLines)}>
+                      <Select.Root value={line.item_id} onValueChange={(value) => updateLine(line.id, { item_id: value }, setLines)}>
                         <Select.Trigger mt="2" />
                         <Select.Content>
                           {items.map((item) => (
@@ -131,37 +119,6 @@ export default function NewOrderPage() {
                               {item.name}
                             </Select.Item>
                           ))}
-                        </Select.Content>
-                      </Select.Root>
-                    </label>
-                    <label>
-                      <Text size="2">Маршрут</Text>
-                      <Select.Root value={line.route_id} onValueChange={(value) => updateLine(line.id, { route_id: value }, setLines)}>
-                        <Select.Trigger mt="2" />
-                        <Select.Content>
-                          {routes
-                            .filter((route) => !line.item_id || route.item_id === Number(line.item_id))
-                            .map((route) => (
-                              <Select.Item key={route.id} value={String(route.id)}>
-                                {route.name} · {route.version}
-                              </Select.Item>
-                            ))}
-                        </Select.Content>
-                      </Select.Root>
-                    </label>
-                    <label>
-                      <Text size="2">BOM</Text>
-                      <Select.Root value={line.bom_id || "default"} onValueChange={(value) => updateLine(line.id, { bom_id: value === "default" ? "" : value }, setLines)}>
-                        <Select.Trigger mt="2" />
-                        <Select.Content>
-                          <Select.Item value="default">По умолчанию</Select.Item>
-                          {boms
-                            .filter((bom) => !line.item_id || bom.item_id === Number(line.item_id))
-                            .map((bom) => (
-                              <Select.Item key={bom.id} value={String(bom.id)}>
-                                {bom.name} · {bom.version}
-                              </Select.Item>
-                            ))}
                         </Select.Content>
                       </Select.Root>
                     </label>
@@ -178,7 +135,7 @@ export default function NewOrderPage() {
               <Button type="button" variant="soft" onClick={() => setLines((current) => [...current, newLine()])}>
                 <Plus size={16} /> Добавить строку
               </Button>
-              <Button type="submit" disabled={submitting || lines.some((line) => !line.item_id || !line.route_id)}>
+              <Button type="submit" disabled={submitting || lines.some((line) => !line.item_id)}>
                 Создать заказ
               </Button>
             </Flex>
@@ -190,7 +147,7 @@ export default function NewOrderPage() {
 }
 
 function newLine(): DraftLine {
-  return { id: Date.now() + Math.round(Math.random() * 1000), item_id: "", route_id: "", bom_id: "", quantity: "1" };
+  return { id: Date.now() + Math.round(Math.random() * 1000), item_id: "", quantity: "1" };
 }
 
 function updateLine(

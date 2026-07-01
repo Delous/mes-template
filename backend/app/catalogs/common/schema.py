@@ -31,3 +31,10 @@ class WorkstationSummary(BaseModel):
     name: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OperationTypeSummary(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
