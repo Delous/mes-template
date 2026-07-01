@@ -16,7 +16,6 @@ import type {
   TaskDto,
   UpdateTaskPayload,
   UpdateUserPayload,
-  WorkstationDto,
 } from "@/types/api";
 
 import * as mockApi from "./mock-api";
@@ -212,11 +211,5 @@ export async function createAdminUser(payload: CreateUserPayload) {
 export async function updateAdminUser(id: number, payload: UpdateUserPayload) {
   if (useMockApi) return mockApi.updateAdminUser(id, payload);
   const response = await apiClient.patch<AdminUserDto>(`/api/v1/admin/users/${id}`, payload);
-  return response.data;
-}
-
-export async function getAdminWorkstations() {
-  if (useMockApi) return mockApi.getAdminWorkstations();
-  const response = await apiClient.get<WorkstationDto[]>("/api/v1/admin/workstations");
   return response.data;
 }

@@ -17,7 +17,6 @@ async def list_operation_types(
     session: AsyncSession,
     page: int,
     size: int,
-    include_deleted: bool,
 ) -> dict:
     total_result = await session.execute(select(func.count()).select_from(OperationType))
     result = await session.execute(

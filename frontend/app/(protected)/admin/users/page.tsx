@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge, Box, Button, Callout, Flex, Grid, Heading, Spinner, Text, TextField } from "@radix-ui/themes";
 import { Save, UserPlus } from "lucide-react";
 
-import { createAdminUser, getAdminUsers, getAdminWorkstations, normalizeApiError, updateAdminUser } from "@/lib/api";
+import { createAdminUser, getAdminUsers, getCatalog, normalizeApiError, updateAdminUser } from "@/lib/api";
 import type { AdminUserDto, EditableUserRole, UserRole, WorkstationDto } from "@/types/api";
 
 const roleLabels: Record<UserRole, string> = {
@@ -29,9 +29,12 @@ export default function UsersPage() {
     setError(null);
 
     try {
-      const [usersResponse, workstationResponse] = await Promise.all([getAdminUsers(), getAdminWorkstations()]);
+      const [usersResponse, workstationResponse] = await Promise.all([
+        getAdminUsers(),
+        getCatalog("workstations", 1, 100),
+      ]);
       setUsers(usersResponse.items);
-      setWorkstations(workstationResponse);
+      setWorkstations(workstationResponse.items);
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {

@@ -719,10 +719,6 @@ export async function updateAdminUser(id: number, payload: UpdateUserPayload) {
   return delay(user);
 }
 
-export async function getAdminWorkstations() {
-  return delay(workstations);
-}
-
 function makeUsername(fullName: string) {
   const base = fullName
     .trim()

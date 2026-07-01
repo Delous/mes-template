@@ -251,15 +251,3 @@ async def user_list(
         "page": page,
         "size": size,
     }
-
-
-async def workstation_list(
-    session: AsyncSession,
-    current_user: UserPublic,
-) -> list[Workstation]:
-    require_admin(current_user)
-
-    result = await session.execute(
-        select(Workstation).order_by(Workstation.id.asc())
-    )
-    return list(result.scalars().all())

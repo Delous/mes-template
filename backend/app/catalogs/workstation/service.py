@@ -17,7 +17,6 @@ async def list_workstations(
     session: AsyncSession,
     page: int,
     size: int,
-    include_deleted: bool,
 ) -> dict:
     total_result = await session.execute(select(func.count()).select_from(Workstation))
     result = await session.execute(

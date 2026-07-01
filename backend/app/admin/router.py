@@ -11,7 +11,6 @@ from app.admin.schema import (
     UpdateUserRequest,
     UserListResponse,
     UserResponse,
-    WorkstationResponse,
 )
 from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
@@ -48,12 +47,4 @@ async def get_users(
     user: UserPublic = Depends(get_current_user),
 ):
     return await admin_service.user_list(session, user, page, size)
-
-
-@router.get("/workstations", response_model=list[WorkstationResponse])
-async def get_workstations(
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    return await admin_service.workstation_list(session, user)
 

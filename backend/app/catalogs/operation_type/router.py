@@ -24,20 +24,10 @@ router = APIRouter(prefix="/operation-types")
 async def get_operation_types(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
-    include_deleted: bool = False,
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_operation_types(session, page, size, include_deleted)
-
-
-@router.get("/{id}", response_model=OperationTypeResponse)
-async def get_operation_type(
-    id: Annotated[int, Path(gt=0)],
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    return await service.get_operation_type_by_id(session, id)
+    return await service.list_operation_types(session, page, size)
 
 
 @router.post("", response_model=OperationTypeResponse, status_code=status.HTTP_201_CREATED)
