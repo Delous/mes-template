@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Box, Button, Dialog, Flex, Grid, Text, TextArea, TextField } from "@radix-ui/themes";
-import { Check, Plus, Save, Trash2 } from "lucide-react";
+import { Check, ChevronRight, GitBranch, Plus, Save, Trash2 } from "lucide-react";
 
 import { CatalogNav } from "@/components/catalog-nav";
 import { EmptyState, ErrorNotice, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
@@ -10,6 +10,7 @@ import {
   createCatalogItem,
   createResourceSpecification,
   getCatalog,
+  getCatalogItem,
   normalizeApiError,
   updateCatalogItem,
   updateResourceSpecification,
@@ -45,14 +46,27 @@ type SpecDraft = {
   inputs: DraftInput[];
 };
 
+type SpecificationTreeNode = {
+  item: ItemDto;
+  quantity: string | null;
+  repeated: boolean;
+  children: SpecificationTreeNode[];
+};
+
 export default function ItemsPage() {
   const [items, setItems] = useState<ItemDto[]>([]);
+  const [selectableItems, setSelectableItems] = useState<ItemDto[]>([]);
   const [units, setUnits] = useState<UnitDto[]>([]);
   const [operationTypes, setOperationTypes] = useState<OperationTypeDto[]>([]);
   const [workstations, setWorkstations] = useState<WorkstationDto[]>([]);
   const [editorItem, setEditorItem] = useState<ItemDto | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft | null>(null);
   const [specDraft, setSpecDraft] = useState<SpecDraft | null>(null);
+  const [specTreeVisible, setSpecTreeVisible] = useState(false);
+  const [specTree, setSpecTree] = useState<SpecificationTreeNode | null>(null);
+  const [specTreeLoading, setSpecTreeLoading] = useState(false);
+  const [specTreeError, setSpecTreeError] = useState<string | null>(null);
+  const [openingItemId, setOpeningItemId] = useState<number | null>(null);
   const [cycleConflictItemId, setCycleConflictItemId] = useState<number | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -62,21 +76,23 @@ export default function ItemsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const specInputItems = useMemo(
-    () => items.filter((item) => item.id !== editorItem?.id),
-    [items, editorItem?.id],
+    () => selectableItems.filter((item) => item.id !== editorItem?.id),
+    [selectableItems, editorItem?.id],
   );
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [itemResponse, unitResponse, operationTypeResponse, workstationResponse] = await Promise.all([
+      const [itemResponse, selectableItemResponse, unitResponse, operationTypeResponse, workstationResponse] = await Promise.all([
         getCatalog("items", page, pageSize),
+        getCatalog("items", 1, 100),
         getCatalog("units", 1, 100),
         getCatalog("operation-types", 1, 100),
         getCatalog("workstations", 1, 100),
       ]);
       setItems(itemResponse.items);
+      setSelectableItems(selectableItemResponse.items);
       setTotal(itemResponse.total);
       setUnits(unitResponse.items);
       setOperationTypes(operationTypeResponse.items);
@@ -92,6 +108,40 @@ export default function ItemsPage() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!specTreeVisible || !editorItem?.resource_specification) {
+      setSpecTree(null);
+      setSpecTreeError(null);
+      setSpecTreeLoading(false);
+      return;
+    }
+
+    const treeRootItem = editorItem;
+    let ignore = false;
+
+    async function loadSpecificationTree() {
+      setSpecTreeLoading(true);
+      setSpecTreeError(null);
+      try {
+        const tree = await buildSpecificationTree(treeRootItem);
+        if (!ignore) setSpecTree(tree);
+      } catch (caughtError) {
+        if (!ignore) {
+          setSpecTree(null);
+          setSpecTreeError(normalizeApiError(caughtError));
+        }
+      } finally {
+        if (!ignore) setSpecTreeLoading(false);
+      }
+    }
+
+    void loadSpecificationTree();
+
+    return () => {
+      ignore = true;
+    };
+  }, [editorItem, specTreeVisible]);
+
   function openCreateEditor() {
     setEditorItem(null);
     setItemDraft({
@@ -100,12 +150,15 @@ export default function ItemsPage() {
       description: "",
     });
     setSpecDraft(null);
+    setSpecTreeVisible(false);
+    setSpecTree(null);
+    setSpecTreeError(null);
     setCycleConflictItemId(null);
     setEditorOpen(true);
   }
 
   function openItemEditor(item: ItemDto) {
-    const fallbackInputItemId = items.find((candidate) => candidate.id !== item.id)?.id ?? 0;
+    const fallbackInputItemId = selectableItems.find((candidate) => candidate.id !== item.id)?.id ?? 0;
     setEditorItem(item);
     setItemDraft({
       name: item.name,
@@ -122,8 +175,24 @@ export default function ItemsPage() {
           )
         : null,
     );
+    setSpecTreeVisible(false);
+    setSpecTree(null);
+    setSpecTreeError(null);
     setCycleConflictItemId(null);
     setEditorOpen(true);
+  }
+
+  async function openItemEditorById(itemId: number) {
+    setOpeningItemId(itemId);
+    setError(null);
+    try {
+      const item = editorItem?.id === itemId ? editorItem : await getCatalogItem("items", itemId);
+      openItemEditor(item);
+    } catch (caughtError) {
+      setError(normalizeApiError(caughtError));
+    } finally {
+      setOpeningItemId(null);
+    }
   }
 
   function closeEditor() {
@@ -131,12 +200,16 @@ export default function ItemsPage() {
     setEditorItem(null);
     setItemDraft(null);
     setSpecDraft(null);
+    setSpecTreeVisible(false);
+    setSpecTree(null);
+    setSpecTreeError(null);
+    setOpeningItemId(null);
     setCycleConflictItemId(null);
   }
 
   function startSpecification() {
     if (!itemDraft) return;
-    const fallbackInputItemId = items.find((candidate) => candidate.id !== editorItem?.id)?.id ?? 0;
+    const fallbackInputItemId = selectableItems.find((candidate) => candidate.id !== editorItem?.id)?.id ?? 0;
     setSpecDraft(
       editorItem
         ? toSpecDraft(
@@ -153,6 +226,9 @@ export default function ItemsPage() {
             inputs: [newInput(fallbackInputItemId)],
           },
     );
+    setSpecTreeVisible(false);
+    setSpecTree(null);
+    setSpecTreeError(null);
     setCycleConflictItemId(null);
   }
 
@@ -313,6 +389,20 @@ export default function ItemsPage() {
               {specDraft ? (
                 <Box className="surface" p="4">
                   <Flex direction="column" gap="3">
+                    <Flex align="center" justify="between" gap="3" wrap="wrap">
+                      <Text size="2" weight="medium">
+                        Ресурсная спецификация
+                      </Text>
+                      {editorItem?.resource_specification ? (
+                        <Button
+                          type="button"
+                          variant="soft"
+                          onClick={() => setSpecTreeVisible((visible) => !visible)}
+                        >
+                          <GitBranch size={15} /> {specTreeVisible ? "Скрыть дерево" : "Просмотреть дерево"}
+                        </Button>
+                      ) : null}
+                    </Flex>
                     <Grid columns={{ initial: "1", md: "2" }} gap="3">
                       <Field
                         label="Название спецификации"
@@ -396,6 +486,25 @@ export default function ItemsPage() {
                         <Save size={15} /> Сохранить спецификацию
                       </Button>
                     </Flex>
+                    {specTreeVisible ? (
+                      <Box className="nested-block" p="3">
+                        {specTreeLoading ? (
+                          <Text size="2" color="gray">
+                            Загружаем дерево спецификации...
+                          </Text>
+                        ) : specTreeError ? (
+                          <Text size="2" color="red">
+                            {specTreeError}
+                          </Text>
+                        ) : specTree ? (
+                          <SpecificationTree
+                            node={specTree}
+                            openingItemId={openingItemId}
+                            onOpenItem={(itemId) => void openItemEditorById(itemId)}
+                          />
+                        ) : null}
+                      </Box>
+                    ) : null}
                   </Flex>
                 </Box>
               ) : null}
@@ -463,6 +572,106 @@ function patchInput(
     ...draft,
     inputs: draft.inputs.map((input) => (input.key === key ? { ...input, ...patch } : input)),
   });
+}
+
+async function buildSpecificationTree(
+  item: ItemDto,
+  visited: Set<number> = new Set(),
+): Promise<SpecificationTreeNode> {
+  const repeated = visited.has(item.id);
+  const path = new Set(visited);
+  path.add(item.id);
+
+  if (repeated || !item.resource_specification) {
+    return { item, quantity: null, repeated, children: [] };
+  }
+
+  const children = await Promise.all(
+    item.resource_specification.inputs.map(async (input) => {
+      const inputItem = await getCatalogItem("items", input.item_id);
+      const child = await buildSpecificationTree(inputItem, path);
+      return { ...child, quantity: String(input.quantity) };
+    }),
+  );
+
+  return { item, quantity: null, repeated: false, children };
+}
+
+function SpecificationTree({
+  node,
+  openingItemId,
+  onOpenItem,
+}: {
+  node: SpecificationTreeNode;
+  openingItemId: number | null;
+  onOpenItem: (itemId: number) => void;
+}) {
+  return (
+    <div className="spec-tree">
+      <SpecificationTreeNodeView node={node} openingItemId={openingItemId} onOpenItem={onOpenItem} root />
+    </div>
+  );
+}
+
+function SpecificationTreeNodeView({
+  node,
+  openingItemId,
+  onOpenItem,
+  root = false,
+}: {
+  node: SpecificationTreeNode;
+  openingItemId: number | null;
+  onOpenItem: (itemId: number) => void;
+  root?: boolean;
+}) {
+  const specification = node.item.resource_specification;
+  const hasChildren = node.children.length > 0;
+  const rowDisabled = openingItemId !== null;
+
+  return (
+    <div className="spec-tree-branch">
+      <button
+        type="button"
+        className="spec-tree-row"
+        disabled={rowDisabled}
+        onClick={() => onOpenItem(node.item.id)}
+      >
+        <ChevronRight className={hasChildren ? "spec-tree-chevron expanded" : "spec-tree-chevron"} size={16} />
+        <Box className="spec-tree-copy">
+          <Flex align="center" gap="2" wrap="wrap">
+            <Text size="2" weight="medium">
+              {node.item.name}
+            </Text>
+            {node.quantity ? (
+              <Badge color="blue" variant="soft">
+                {node.quantity}
+              </Badge>
+            ) : null}
+            {root && specification ? (
+              <Badge color="green" variant="soft">
+                выход {specification.output_quantity}
+              </Badge>
+            ) : null}
+          </Flex>
+          <Text as="p" size="1" color="gray" className="spec-tree-meta">
+            {specification ? specification.name : node.repeated ? "Повторяющийся узел" : "Без ресурсной спецификации"}
+          </Text>
+        </Box>
+      </button>
+      {hasChildren ? (
+        <div className="spec-tree-children">
+          {node.children.map((child, index) => (
+            <SpecificationTreeNodeView
+              key={`${node.item.id}-${child.item.id}-${child.quantity ?? "root"}-${index}`}
+              node={child}
+              openingItemId={openingItemId}
+              onOpenItem={onOpenItem}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function getCycleConflict(error: unknown): CycleConflictDetail | null {
