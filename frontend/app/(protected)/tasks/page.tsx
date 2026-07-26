@@ -40,7 +40,7 @@ export default function TasksPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Задачи" description="Задачи формируются backend автоматически при создании заказа." />
+      <PageHeader title="Задачи" />
       <ErrorNotice message={error} />
 
       {loading ? (

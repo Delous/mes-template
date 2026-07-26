@@ -40,13 +40,14 @@ export default function UnitsPage() {
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     await run(async () => {
       await createCatalogItem("units", {
         name: String(formData.get("name") ?? "").trim(),
         symbol: String(formData.get("symbol") ?? "").trim(),
       });
-      event.currentTarget.reset();
+      form.reset();
     });
   }
 
@@ -76,7 +77,7 @@ export default function UnitsPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Единицы измерения" description="Справочник единиц для номенклатуры." />
+      <PageHeader title="Единицы измерения" />
       <CatalogNav />
       <ErrorNotice message={error} />
       <IncludeDeleted checked={includeDeleted} onCheckedChange={setIncludeDeleted} />

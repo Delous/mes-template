@@ -74,7 +74,7 @@ export default function OperationTypesPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Типы операций" description="Отдельный справочник названий операций." />
+      <PageHeader title="Типы операций" />
       <CatalogNav />
       <ErrorNotice message={error} />
 

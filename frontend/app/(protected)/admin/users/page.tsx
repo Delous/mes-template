@@ -47,11 +47,11 @@ export default function UsersPage() {
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setSubmitting(true);
     setError(null);
     setNotice(null);
-
-    const formData = new FormData(event.currentTarget);
 
     try {
       const user = await createAdminUser({
@@ -59,7 +59,7 @@ export default function UsersPage() {
         password: String(formData.get("password") ?? ""),
         role: String(formData.get("role") ?? "operator") as EditableUserRole,
       });
-      event.currentTarget.reset();
+      form.reset();
       setNotice(`Пользователь создан. Логин: ${user.username}`);
       await loadData();
     } catch (caughtError) {
@@ -97,9 +97,6 @@ export default function UsersPage() {
       <Heading size="7" mb="1">
         Пользователи
       </Heading>
-      <Text as="p" color="gray" size="2" mb="5">
-        Backend генерирует логин автоматически из ФИО.
-      </Text>
 
       {error ? (
         <Callout.Root color="red" mb="4">

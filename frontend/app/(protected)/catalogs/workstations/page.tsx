@@ -74,7 +74,7 @@ export default function WorkstationsPage() {
 
   return (
     <div className="page-content">
-      <PageHeader title="Рабочие посты" description="Список производственных рабочих постов." />
+      <PageHeader title="Рабочие посты" />
       <CatalogNav />
       <ErrorNotice message={error} />
 

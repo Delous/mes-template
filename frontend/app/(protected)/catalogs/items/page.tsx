@@ -223,7 +223,6 @@ export default function ItemsPage() {
     <div className="page-content">
       <PageHeader
         title="Номенклатура"
-        description="Материалы, сырье и готовые изделия."
         action={
           <Button type="button" onClick={openCreateEditor} disabled={units.length === 0}>
             <Plus size={16} /> Создать

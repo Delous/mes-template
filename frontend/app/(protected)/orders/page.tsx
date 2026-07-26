@@ -41,7 +41,6 @@ export default function OrdersPage() {
     <div className="page-content">
       <PageHeader
         title="Заказы"
-        description="Создание заказа запускает построение производственных задач."
         action={
           <Button asChild>
             <Link href="/orders/new">

@@ -26,7 +26,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
 };
 
-const useMockApi = true;
+const useMockApi = false;
 
 export const apiClient = axios.create({
   baseURL: "",
