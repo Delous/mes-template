@@ -509,7 +509,12 @@ function createTasksForOrder(order: OrderDto) {
 }
 
 export async function getCatalog<R extends CatalogResource>(resource: R, page = 1, size = 20, includeDeleted = false) {
-  return delay(toList(activeFilter(getCatalogStore(resource), includeDeleted), page, size));
+  const filteredItems = activeFilter(getCatalogStore(resource), includeDeleted);
+  const orderedItems =
+    resource === "items"
+      ? [...filteredItems].sort((first, second) => first.name.localeCompare(second.name, "ru", { sensitivity: "base" }) || first.id - second.id)
+      : filteredItems;
+  return delay(toList(orderedItems, page, size));
 }
 
 export async function getCatalogItem<R extends CatalogResource>(resource: R, id: number) {

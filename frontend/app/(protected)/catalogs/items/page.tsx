@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Box, Button, Dialog, Flex, Grid, Text, TextArea, TextField } from "@radix-ui/themes";
-import { Check, ChevronRight, GitBranch, Plus, Save, Trash2 } from "lucide-react";
+import { ChevronRight, GitBranch, Plus, Save, Trash2 } from "lucide-react";
 
 import { CatalogNav } from "@/components/catalog-nav";
-import { EmptyState, ErrorNotice, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
+import { EmptyState, ErrorNotice, formatDate, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
 import {
   createCatalogItem,
   createResourceSpecification,
@@ -78,6 +78,10 @@ export default function ItemsPage() {
   const specInputItems = useMemo(
     () => selectableItems.filter((item) => item.id !== editorItem?.id),
     [selectableItems, editorItem?.id],
+  );
+  const sortedItems = useMemo(
+    () => [...items].sort((first, second) => compareItemNames(first, second)),
+    [items],
   );
 
   const loadData = useCallback(async () => {
@@ -314,29 +318,48 @@ export default function ItemsPage() {
         <EmptyState />
       ) : (
         <>
-          <Grid className="item-card-grid" columns={{ initial: "1", sm: "2", lg: "3" }} gap="3">
-            {items.map((item) => (
-              <button key={item.id} type="button" className="item-card" onClick={() => openItemEditor(item)}>
-                <Flex align="start" justify="between" gap="3">
-                  <Box className="item-card-copy">
-                    <Text size="2" weight="medium">
-                      {item.name}
-                    </Text>
-                    <Text as="p" size="1" color="gray">
-                      {item.description || "Описание не указано"}
-                    </Text>
-                  </Box>
-                  {item.resource_specification ? (
-                    <Badge color="green">
-                      <Check size={13} /> Есть
-                    </Badge>
-                  ) : (
-                    <Badge color="gray">Нет</Badge>
-                  )}
-                </Flex>
-              </button>
-            ))}
-          </Grid>
+          <Box className="surface table-scroll">
+            <table className="data-table items-table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Единица</th>
+                  <th>Описание</th>
+                  <th>Спецификация</th>
+                  <th>Обновлено</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedItems.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <Text weight="medium">{item.name}</Text>
+                    </td>
+                    <td>{item.unit ? `${item.unit.name} (${item.unit.symbol})` : item.unit_id}</td>
+                    <td>
+                      <Text color={item.description ? undefined : "gray"}>
+                        {item.description || "Описание не указано"}
+                      </Text>
+                    </td>
+                    <td>
+                      {item.resource_specification ? (
+                        <Badge color="green">Есть</Badge>
+                      ) : (
+                        <Badge color="gray">Нет</Badge>
+                      )}
+                    </td>
+                    <td>{formatDate(item.updated_at)}</td>
+                    <td>
+                      <Button type="button" size="2" variant="soft" onClick={() => openItemEditor(item)}>
+                        Открыть <ChevronRight size={15} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Box>
           <Pagination page={page} size={pageSize} total={total} onPageChange={setPage} />
         </>
       )}
@@ -540,6 +563,11 @@ function toSpecDraft(
       ? spec.inputs.map((input) => ({ key: input.id, item_id: input.item_id, quantity: String(input.quantity) }))
       : [newInput(fallbackInputItemId)],
   };
+}
+
+function compareItemNames(first: ItemDto, second: ItemDto): number {
+  const byName = first.name.localeCompare(second.name, "ru", { sensitivity: "base" });
+  return byName === 0 ? first.id - second.id : byName;
 }
 
 function canSaveItem(draft: ItemDraft): boolean {

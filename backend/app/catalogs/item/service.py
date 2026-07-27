@@ -56,7 +56,15 @@ async def list_items(
     size: int,
     include_deleted: bool,
 ) -> dict:
-    return await list_entities(session, Item, page, size, include_deleted, item_options())
+    return await list_entities(
+        session,
+        Item,
+        page,
+        size,
+        include_deleted,
+        item_options(),
+        [Item.name.asc(), Item.id.asc()],
+    )
 
 
 async def get_item_by_id(session: AsyncSession, item_id: int) -> Item:

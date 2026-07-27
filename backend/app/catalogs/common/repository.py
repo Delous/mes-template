@@ -33,16 +33,18 @@ async def list_entities(
     size: int,
     include_deleted: bool,
     options: list[Any] | None = None,
+    order_by: list[Any] | None = None,
 ) -> dict:
     where_clause = active_filter(model, include_deleted)
     total_result = await session.execute(
         select(func.count()).select_from(model).where(where_clause)
     )
 
+    order_by_clauses = order_by or [model.id.asc()]
     stmt = (
         select(model)
         .where(where_clause)
-        .order_by(model.id.asc())
+        .order_by(*order_by_clauses)
         .offset((page - 1) * size)
         .limit(size)
     )
