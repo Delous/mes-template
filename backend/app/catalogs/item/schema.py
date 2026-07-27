@@ -69,6 +69,7 @@ class ItemBase(BaseModel):
     name: str = Field(min_length=1, max_length=256)
     unit_id: int = Field(gt=0)
     description: str | None = None
+    is_product: bool = False
 
 
 class ItemCreate(ItemBase):
@@ -81,6 +82,7 @@ class ItemUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=256)
     unit_id: int | None = Field(default=None, gt=0)
     description: str | None = None
+    is_product: bool | None = None
 
 
 class ItemResponse(ItemBase):

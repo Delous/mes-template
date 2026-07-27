@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from app.db.models.task import Task
     from app.db.models.unit import Unit
 
-from sqlalchemy import BigInteger, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,6 +23,7 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    is_product: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     unit_id: Mapped[int] = mapped_column(
         ForeignKey("units.id"),
         nullable=False,

@@ -55,7 +55,9 @@ async def list_items(
     page: int,
     size: int,
     include_deleted: bool,
+    is_product: bool | None = None,
 ) -> dict:
+    filters = [Item.is_product.is_(is_product)] if is_product is not None else None
     return await list_entities(
         session,
         Item,
@@ -64,6 +66,7 @@ async def list_items(
         include_deleted,
         item_options(),
         [Item.name.asc(), Item.id.asc()],
+        filters,
     )
 
 

@@ -27,10 +27,11 @@ async def get_items(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
     include_deleted: bool = False,
+    is_product: bool | None = None,
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_items(session, page, size, include_deleted)
+    return await service.list_items(session, page, size, include_deleted, is_product)
 
 
 @router.get("/{id}", response_model=ItemResponse)

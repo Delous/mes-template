@@ -171,10 +171,13 @@ export async function getCatalog<R extends CatalogResource>(
   page = 1,
   size = 20,
   includeDeleted = false,
+  onlyProducts = false,
 ) {
-  if (useMockApi) return mockApi.getCatalog(resource, page, size, includeDeleted);
+  if (useMockApi) return mockApi.getCatalog(resource, page, size, includeDeleted, onlyProducts);
+  const params: Record<string, string | number | boolean> = { page, size, include_deleted: includeDeleted };
+  if (resource === "items" && onlyProducts) params.is_product = true;
   const response = await apiClient.get<ListResponse<CatalogDtoMap[R]>>(`/api/v1/catalogs/${resource}`, {
-    params: { page, size, include_deleted: includeDeleted },
+    params,
   });
   return response.data;
 }

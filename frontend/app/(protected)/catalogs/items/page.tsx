@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Box, Button, Dialog, Flex, Grid, Text, TextArea, TextField } from "@radix-ui/themes";
+import { Badge, Box, Button, Checkbox, Dialog, Flex, Grid, Text, TextArea, TextField } from "@radix-ui/themes";
 import { ChevronRight, GitBranch, Plus, Save, Trash2 } from "lucide-react";
 
 import { CatalogNav } from "@/components/catalog-nav";
@@ -36,6 +36,7 @@ type ItemDraft = {
   name: string;
   unit_id: number;
   description: string;
+  is_product: boolean;
 };
 
 type SpecDraft = {
@@ -71,6 +72,7 @@ export default function ItemsPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [showOnlyProducts, setShowOnlyProducts] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function ItemsPage() {
     setError(null);
     try {
       const [itemResponse, selectableItemResponse, unitResponse, operationTypeResponse, workstationResponse] = await Promise.all([
-        getCatalog("items", page, pageSize),
+        getCatalog("items", page, pageSize, false, showOnlyProducts),
         getCatalog("items", 1, 100),
         getCatalog("units", 1, 100),
         getCatalog("operation-types", 1, 100),
@@ -106,11 +108,16 @@ export default function ItemsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, showOnlyProducts]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  function handleShowOnlyProductsChange(checked: boolean) {
+    setShowOnlyProducts(checked);
+    setPage(1);
+  }
 
   useEffect(() => {
     if (!specTreeVisible || !editorItem?.resource_specification) {
@@ -152,6 +159,7 @@ export default function ItemsPage() {
       name: "",
       unit_id: units[0]?.id ?? 0,
       description: "",
+      is_product: false,
     });
     setSpecDraft(null);
     setSpecTreeVisible(false);
@@ -168,6 +176,7 @@ export default function ItemsPage() {
       name: item.name,
       unit_id: item.unit_id,
       description: item.description ?? "",
+      is_product: item.is_product,
     });
     setSpecDraft(
       item.resource_specification
@@ -246,6 +255,7 @@ export default function ItemsPage() {
         name: itemDraft.name.trim(),
         unit_id: Number(itemDraft.unit_id),
         description: itemDraft.description.trim() || null,
+        is_product: itemDraft.is_product,
       };
       const savedItem = editorItem
         ? await updateCatalogItem("items", editorItem.id, payload)
@@ -255,6 +265,7 @@ export default function ItemsPage() {
         name: savedItem.name,
         unit_id: savedItem.unit_id,
         description: savedItem.description ?? "",
+        is_product: savedItem.is_product,
       });
       await loadData();
     } catch (caughtError) {
@@ -311,6 +322,10 @@ export default function ItemsPage() {
       />
       <CatalogNav />
       <ErrorNotice message={error} />
+      <Text as="label" size="2" className="checkbox-label" mb="4">
+        <Checkbox checked={showOnlyProducts} onCheckedChange={(value) => handleShowOnlyProductsChange(value === true)} />
+        Показать только изделия
+      </Text>
 
       {loading ? (
         <LoadingState />
@@ -325,7 +340,7 @@ export default function ItemsPage() {
                   <th>Название</th>
                   <th>Единица</th>
                   <th>Описание</th>
-                  <th>Спецификация</th>
+                  <th>Изделие</th>
                   <th />
                 </tr>
               </thead>
@@ -342,8 +357,8 @@ export default function ItemsPage() {
                       </Text>
                     </td>
                     <td>
-                      {item.resource_specification ? (
-                        <Badge color="green">Есть</Badge>
+                      {item.is_product ? (
+                        <Badge color="green">Да</Badge>
                       ) : (
                         <Badge color="gray">Нет</Badge>
                       )}
@@ -384,6 +399,10 @@ export default function ItemsPage() {
                   <DescriptionField
                     value={itemDraft.description}
                     onChange={(description) => setItemDraft({ ...itemDraft, description })}
+                  />
+                  <ProductCheckbox
+                    checked={itemDraft.is_product}
+                    onCheckedChange={(is_product) => setItemDraft({ ...itemDraft, is_product })}
                   />
                 </Grid>
                 <Flex mt="4" gap="3" wrap="wrap">
@@ -736,6 +755,15 @@ function DescriptionField({ value, onChange }: { value: string; onChange: (value
       <Text size="2">Описание</Text>
       <TextArea mt="2" value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function ProductCheckbox({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (checked: boolean) => void }) {
+  return (
+    <Text as="label" size="2" className="checkbox-label form-checkbox">
+      <Checkbox checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
+      Изделие
+    </Text>
   );
 }
 

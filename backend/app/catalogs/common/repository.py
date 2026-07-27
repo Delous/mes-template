@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select, true
+from sqlalchemy import and_, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -34,8 +34,11 @@ async def list_entities(
     include_deleted: bool,
     options: list[Any] | None = None,
     order_by: list[Any] | None = None,
+    filters: list[Any] | None = None,
 ) -> dict:
     where_clause = active_filter(model, include_deleted)
+    if filters:
+        where_clause = and_(where_clause, *filters)
     total_result = await session.execute(
         select(func.count()).select_from(model).where(where_clause)
     )

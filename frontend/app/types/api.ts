@@ -94,6 +94,7 @@ export type ItemDto = BaseCatalogDto & {
   unit_id: number;
   unit: UnitSummary;
   description: string | null;
+  is_product: boolean;
   resource_specification: ResourceSpecificationDto | null;
 };
 
@@ -101,6 +102,7 @@ export type ItemPayload = {
   name: string;
   unit_id: number;
   description?: string | null;
+  is_product?: boolean;
 };
 
 export type ItemUpdatePayload = Partial<ItemPayload>;

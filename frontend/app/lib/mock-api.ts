@@ -53,6 +53,7 @@ let items: ItemDto[] = [
     created_at: now,
     updated_at: now,
     deleted_at: null,
+    is_product: false,
     resource_specification: null,
   },
   {
@@ -64,6 +65,7 @@ let items: ItemDto[] = [
     created_at: now,
     updated_at: now,
     deleted_at: null,
+    is_product: true,
     resource_specification: null,
   },
 ];
@@ -307,6 +309,7 @@ function buildCatalogItem<R extends CatalogResource>(resource: R, payload: Catal
       unit_id: Number(data.unit_id),
       unit: toUnitSummary(unit),
       description: data.description ?? null,
+      is_product: Boolean(data.is_product),
       resource_specification: data.resource_specification ?? null,
     } as CatalogDtoMap[R];
   }
@@ -508,12 +511,16 @@ function createTasksForOrder(order: OrderDto) {
   }
 }
 
-export async function getCatalog<R extends CatalogResource>(resource: R, page = 1, size = 20, includeDeleted = false) {
+export async function getCatalog<R extends CatalogResource>(resource: R, page = 1, size = 20, includeDeleted = false, onlyProducts = false) {
   const filteredItems = activeFilter(getCatalogStore(resource), includeDeleted);
+  const productFilteredItems =
+    resource === "items" && onlyProducts
+      ? filteredItems.filter((item) => (item as ItemDto).is_product)
+      : filteredItems;
   const orderedItems =
     resource === "items"
-      ? [...filteredItems].sort((first, second) => first.name.localeCompare(second.name, "ru", { sensitivity: "base" }) || first.id - second.id)
-      : filteredItems;
+      ? [...productFilteredItems].sort((first, second) => first.name.localeCompare(second.name, "ru", { sensitivity: "base" }) || first.id - second.id)
+      : productFilteredItems;
   return delay(toList(orderedItems, page, size));
 }
 
