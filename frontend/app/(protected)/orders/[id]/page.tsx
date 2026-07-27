@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, Box, Button, Flex, Grid, Heading, Text } from "@radix-ui/themes";
+import { Box, Button, Flex, Grid, Heading } from "@radix-ui/themes";
 import { ArrowLeft, Eye } from "lucide-react";
 
 import { useAuth } from "@/components/auth-context";
@@ -64,7 +64,7 @@ export default function OrderPage() {
     <div className="page-content">
       <PageHeader
         title={order ? `Заказ ${order.number}` : "Заказ"}
-        description={order ? `Создан ${formatDate(order.created_at)}` : undefined}
+        description={order ? `Статус: ${order.status} · Создан: ${formatDate(order.created_at)}` : undefined}
         action={
           <Flex gap="2" wrap="wrap">
             {order && user?.role === "admin" ? (
@@ -89,15 +89,6 @@ export default function OrderPage() {
         <LoadingState label="Загружаем заказ" />
       ) : order ? (
         <Grid columns={{ initial: "1", md: "3" }} gap="4">
-          <Box className="surface" p="4">
-            <Text size="1" color="gray">
-              Статус
-            </Text>
-            <Text as="p" weight="medium">
-              <Badge>{order.status}</Badge>
-            </Text>
-          </Box>
-
           <Box className="surface table-scroll order-lines-panel">
             <Box p="4" pb="0">
               <Heading size="4">Строки заказа</Heading>
