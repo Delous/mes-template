@@ -5,7 +5,7 @@ import { Badge, Box, Button, Dialog, Flex, Grid, Text, TextArea, TextField } fro
 import { ChevronRight, GitBranch, Plus, Save, Trash2 } from "lucide-react";
 
 import { CatalogNav } from "@/components/catalog-nav";
-import { EmptyState, ErrorNotice, formatDate, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
+import { EmptyState, ErrorNotice, LoadingState, PageHeader, Pagination, toDecimal } from "@/components/page-tools";
 import {
   createCatalogItem,
   createResourceSpecification,
@@ -326,7 +326,6 @@ export default function ItemsPage() {
                   <th>Единица</th>
                   <th>Описание</th>
                   <th>Спецификация</th>
-                  <th>Обновлено</th>
                   <th />
                 </tr>
               </thead>
@@ -349,7 +348,6 @@ export default function ItemsPage() {
                         <Badge color="gray">Нет</Badge>
                       )}
                     </td>
-                    <td>{formatDate(item.updated_at)}</td>
                     <td>
                       <Button type="button" size="2" variant="soft" onClick={() => openItemEditor(item)}>
                         Открыть <ChevronRight size={15} />
