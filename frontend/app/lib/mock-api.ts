@@ -13,6 +13,7 @@ import type {
   LoginPayload,
   MeDto,
   OperationTypeDto,
+  OrderDetailDto,
   OrderDto,
   ResourceSpecificationPayload,
   ResourceSpecificationUpdatePayload,
@@ -404,7 +405,7 @@ export async function getOrders(page = 1, size = 20) {
 export async function getOrder(id: number) {
   const order = orders.find((item) => item.id === id);
   if (!order) throw new Error("Заказ не найден.");
-  return delay(order);
+  return delay(toOrderDetail(order));
 }
 
 export async function createOrder(payload: CreateOrderPayload) {
@@ -423,7 +424,22 @@ export async function createOrder(payload: CreateOrderPayload) {
   };
   orders = [order, ...orders];
   createTasksForOrder(order);
-  return delay(order);
+  return delay(toOrderDetail(order));
+}
+
+export async function deleteOrder(id: number) {
+  const order = orders.find((item) => item.id === id);
+  if (!order) throw new Error("Заказ не найден.");
+  orders = orders.filter((item) => item.id !== id);
+  tasks = tasks.filter((task) => task.order_id !== id);
+  return delay(undefined);
+}
+
+function toOrderDetail(order: OrderDto): OrderDetailDto {
+  return {
+    ...order,
+    tasks: tasks.filter((task) => task.order_id === order.id).sort((first, second) => first.id - second.id),
+  };
 }
 
 function createTasksForOrder(order: OrderDto) {

@@ -206,6 +206,10 @@ export type OrderDto = {
   lines: OrderLineDto[];
 };
 
+export type OrderDetailDto = OrderDto & {
+  tasks: TaskDto[];
+};
+
 export type TaskType = "warehouse_delivery" | "operation" | "quality_review" | "transfer";
 export type TaskStatus = "waiting" | "to_do" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskUpdateStatus = TaskStatus | "rejected";

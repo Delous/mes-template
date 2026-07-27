@@ -3,10 +3,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from fastapi import status as http_status
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.schema import UserPublic
 from app.db.models.item import Item
 from app.db.models.order import Order, OrderLine
 from app.db.models.resource_specification import (
@@ -14,12 +16,23 @@ from app.db.models.resource_specification import (
     ResourceSpecificationInput,
 )
 from app.db.models.task import Task, TaskDependency
+from app.db.models.task_history import TaskHistory
 from app.orders.schema import CreateOrderRequest
 from app.tasks.service import activate_ready_tasks
 
 
 def order_options():
     return [selectinload(Order.lines)]
+
+
+def order_detail_options():
+    return [
+        selectinload(Order.lines),
+        selectinload(Order.tasks).selectinload(Task.item),
+        selectinload(Order.tasks).selectinload(Task.workstation),
+        selectinload(Order.tasks).selectinload(Task.source_workstation),
+        selectinload(Order.tasks).selectinload(Task.target_workstation),
+    ]
 
 
 def specification_options():
@@ -249,13 +262,46 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
 async def get_order_by_id(session: AsyncSession, order_id: int) -> Order:
     result = await session.execute(
         select(Order)
-        .options(*order_options())
+        .options(*order_detail_options())
         .where(Order.id == order_id)
     )
     order = result.scalar_one_or_none()
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+
+async def delete_order(session: AsyncSession, order_id: int, user: UserPublic) -> None:
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order_task_ids = select(Task.id).where(Task.order_id == order_id)
+    await session.execute(
+        delete(TaskDependency).where(
+            TaskDependency.task_id.in_(order_task_ids)
+            | TaskDependency.depends_on_task_id.in_(order_task_ids)
+        ).execution_options(synchronize_session=False)
+    )
+    await session.execute(
+        delete(TaskHistory)
+        .where(TaskHistory.task_id.in_(order_task_ids))
+        .execution_options(synchronize_session=False)
+    )
+    await session.execute(
+        delete(Task)
+        .where(Task.order_id == order_id)
+        .execution_options(synchronize_session=False)
+    )
+    await session.delete(order)
+    await session.flush()
 
 
 async def list_orders(

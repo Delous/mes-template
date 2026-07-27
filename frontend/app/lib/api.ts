@@ -11,6 +11,7 @@ import type {
   CreateUserPayload,
   ListResponse,
   LoginPayload,
+  OrderDetailDto,
   MeDto,
   OrderDto,
   ResourceSpecificationPayload,
@@ -156,14 +157,19 @@ export async function getOrders(page = 1, size = 20) {
 
 export async function getOrder(id: number) {
   if (useMockApi) return mockApi.getOrder(id);
-  const response = await apiClient.get<OrderDto>(`/api/v1/orders/${id}`);
+  const response = await apiClient.get<OrderDetailDto>(`/api/v1/orders/${id}`);
   return response.data;
 }
 
 export async function createOrder(payload: CreateOrderPayload) {
   if (useMockApi) return mockApi.createOrder(payload);
-  const response = await apiClient.post<OrderDto>("/api/v1/orders", payload);
+  const response = await apiClient.post<OrderDetailDto>("/api/v1/orders", payload);
   return response.data;
+}
+
+export async function deleteOrder(id: number) {
+  if (useMockApi) return mockApi.deleteOrder(id);
+  await apiClient.delete(`/api/v1/orders/${id}`);
 }
 
 export async function getCatalog<R extends CatalogResource>(

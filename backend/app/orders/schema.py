@@ -5,6 +5,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.tasks.schema import TaskResponse
+
 
 class CreateOrderLineRequest(BaseModel):
     item_id: int = Field(gt=0)
@@ -35,6 +37,10 @@ class OrderResponse(BaseModel):
     lines: list[OrderLineResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrderDetailResponse(OrderResponse):
+    tasks: list[TaskResponse]
 
 
 class OrderListResponse(BaseModel):
