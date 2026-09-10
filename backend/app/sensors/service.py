@@ -38,9 +38,19 @@ def parse_sensor_line(line: str) -> ParsedLine:
         except ValueError as e:
             raise ValueError(f"value must be int or NULL, got {v!r}") from e
 
+
+    def parse_value_with_added_value(v: str) -> int | None:
+        v, _ = v.split('/')
+        if v.lower() == "null":
+            return None
+        try:
+            return int(v)
+        except ValueError as e:
+            raise ValueError(f"value must be int or NULL, got {v!r}") from e
+
     return ParsedLine(
         code=int_to_ipv4(int(code_s)),
-        ch_values=(parse_val(v1_s), parse_val(v2_s), parse_val(v3_s)),
+        ch_values=(parse_val(v1_s), parse_val(v2_s), parse_value_with_added_value(v3_s)),
     )
 
 
