@@ -11,8 +11,6 @@ from app.catalogs.item.schema import (
     ItemListResponse,
     ItemResponse,
     ItemUpdate,
-    ResourceSpecificationCreate,
-    ResourceSpecificationUpdate,
 )
 from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
@@ -69,27 +67,3 @@ async def delete_item(
     user: UserPublic = Depends(get_current_user),
 ):
     await service.delete_item(session, id)
-
-
-@router.post(
-    "/{id}/resource-specification",
-    response_model=ItemResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_resource_specification(
-    id: Annotated[int, Path(gt=0)],
-    payload: ResourceSpecificationCreate,
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    return await service.create_resource_specification(session, id, payload)
-
-
-@router.patch("/{id}/resource-specification", response_model=ItemResponse)
-async def update_resource_specification(
-    id: Annotated[int, Path(gt=0)],
-    payload: ResourceSpecificationUpdate,
-    session: AsyncSession = Depends(get_session),
-    user: UserPublic = Depends(get_current_user),
-):
-    return await service.update_resource_specification(session, id, payload)

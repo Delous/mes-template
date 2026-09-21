@@ -10,7 +10,7 @@ from app.tasks.schema import TaskResponse
 
 class CreateOrderLineRequest(BaseModel):
     item_id: int = Field(gt=0)
-    quantity: Decimal = Field(gt=0, max_digits=18, decimal_places=6)
+    quantity: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
 
 
 class CreateOrderRequest(BaseModel):

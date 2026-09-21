@@ -25,13 +25,13 @@ class UpdateTaskRequest(BaseModel):
         default=None,
         gt=0,
         max_digits=18,
-        decimal_places=6,
+        decimal_places=2,
     )
     defect_quantity_delta: Decimal | None = Field(
         default=None,
         gt=0,
         max_digits=18,
-        decimal_places=6,
+        decimal_places=2,
     )
     comment: str | None = None
 
@@ -62,7 +62,6 @@ class TaskResponse(BaseModel):
     order_id: int
     order_line_id: int
     item_id: int
-    resource_specification_id: int | None
     workstation_id: int | None
     source_workstation_id: int | None
     target_workstation_id: int | None

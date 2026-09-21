@@ -72,7 +72,7 @@ async def get_operation_task_for_quality_review(
     result = await session.execute(
         select(Task).where(
             Task.order_line_id == quality_task.order_line_id,
-            Task.resource_specification_id == quality_task.resource_specification_id,
+            Task.item_id == quality_task.item_id,
             Task.task_type == "operation",
         )
     )

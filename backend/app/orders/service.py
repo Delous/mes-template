@@ -10,11 +10,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.schema import UserPublic
 from app.db.models.item import Item
+from app.db.models.item_input import ItemInput
 from app.db.models.order import Order, OrderLine
-from app.db.models.resource_specification import (
-    ResourceSpecification,
-    ResourceSpecificationInput,
-)
 from app.db.models.task import Task, TaskDependency
 from app.db.models.task_history import TaskHistory
 from app.orders.schema import CreateOrderRequest
@@ -35,13 +32,11 @@ def order_detail_options():
     ]
 
 
-def specification_options():
+def item_options():
     return [
-        selectinload(ResourceSpecification.inputs).selectinload(
-            ResourceSpecificationInput.item
-        ),
-        selectinload(ResourceSpecification.operation_type),
-        selectinload(ResourceSpecification.workstation),
+        selectinload(Item.inputs).selectinload(ItemInput.input_item),
+        selectinload(Item.operation_type),
+        selectinload(Item.workstation),
     ]
 
 
@@ -55,14 +50,12 @@ async def get_active_item(session: AsyncSession, item_id: int) -> Item:
     return item
 
 
-async def get_specification_for_item(
+async def get_item_with_inputs(
     session: AsyncSession,
     item_id: int,
-) -> ResourceSpecification | None:
+) -> Item | None:
     result = await session.execute(
-        select(ResourceSpecification)
-        .options(*specification_options())
-        .where(ResourceSpecification.item_id == item_id)
+        select(Item).options(*item_options()).where(Item.id == item_id, Item.deleted_at.is_(None))
     )
     return result.scalar_one_or_none()
 
@@ -91,23 +84,23 @@ async def create_tasks_for_item(
     stack: set[int],
 ) -> tuple[Task | None, int | None]:
     if item_id in stack:
-        raise HTTPException(status_code=409, detail="Cyclic resource specification dependency detected")
+        raise HTTPException(status_code=409, detail="Cyclic item composition dependency detected")
 
-    specification = await get_specification_for_item(session, item_id)
-    if specification is None:
+    item = await get_item_with_inputs(session, item_id)
+    if item is None or not (item.operation_type_id and item.workstation_id and item.output_quantity):
         return None, None
 
     stack.add(item_id)
-    multiplier = required_quantity / Decimal(specification.output_quantity)
+    multiplier = required_quantity / Decimal(item.output_quantity)
     dependency_tasks: list[Task] = []
 
-    for specification_input in specification.inputs:
-        input_quantity = specification_input.quantity * multiplier
+    for item_input in item.inputs:
+        input_quantity = (item_input.quantity * multiplier).quantize(Decimal("0.01"), rounding="ROUND_CEILING")
         upstream_task, upstream_workstation_id = await create_tasks_for_item(
             session,
             order,
             line,
-            specification_input.item_id,
+            item_input.input_item_id,
             input_quantity,
             stack,
         )
@@ -116,22 +109,21 @@ async def create_tasks_for_item(
             dependency = upstream_task
             if (
                 upstream_workstation_id is not None
-                and upstream_workstation_id != specification.workstation_id
+                and upstream_workstation_id != item.workstation_id
             ):
                 dependency = Task(
                     task_type="transfer",
                     status="waiting",
-                    description=f"Доставить {specification_input.item.name}",
+                    description=f"Доставить {item_input.input_item.name}",
                     planned_quantity=input_quantity,
                     actual_quantity=Decimal("0"),
                     defect_quantity=Decimal("0"),
                     order_id=order.id,
                     order_line_id=line.id,
-                    resource_specification_id=specification.id,
-                    item_id=specification_input.item_id,
-                    workstation_id=specification.workstation_id,
+                    item_id=item_input.input_item_id,
+                    workstation_id=item.workstation_id,
                     source_workstation_id=upstream_workstation_id,
-                    target_workstation_id=specification.workstation_id,
+                    target_workstation_id=item.workstation_id,
                 )
                 session.add(dependency)
                 await session.flush()
@@ -141,16 +133,15 @@ async def create_tasks_for_item(
             delivery_task = Task(
                 task_type="warehouse_delivery",
                 status="waiting",
-                description=f"Доставить материалы: {specification_input.item.name}",
+                description=f"Доставить материалы: {item_input.input_item.name}",
                 planned_quantity=input_quantity,
                 actual_quantity=Decimal("0"),
                 defect_quantity=Decimal("0"),
                 order_id=order.id,
                 order_line_id=line.id,
-                resource_specification_id=specification.id,
-                item_id=specification_input.item_id,
-                workstation_id=specification.workstation_id,
-                target_workstation_id=specification.workstation_id,
+                item_id=item_input.input_item_id,
+                workstation_id=item.workstation_id,
+                target_workstation_id=item.workstation_id,
             )
             session.add(delivery_task)
             await session.flush()
@@ -159,15 +150,14 @@ async def create_tasks_for_item(
     operation_task = Task(
         task_type="operation",
         status="waiting",
-        description=specification.name,
+        description=item.description,
         planned_quantity=required_quantity,
         actual_quantity=Decimal("0"),
         defect_quantity=Decimal("0"),
         order_id=order.id,
         order_line_id=line.id,
-        resource_specification_id=specification.id,
-        item_id=specification.item_id,
-        workstation_id=specification.workstation_id,
+        item_id=item.id,
+        workstation_id=item.workstation_id,
     )
     session.add(operation_task)
     await session.flush()
@@ -176,7 +166,7 @@ async def create_tasks_for_item(
         await add_dependency(session, operation_task, dependency_task)
 
     stack.remove(item_id)
-    return operation_task, specification.workstation_id
+    return operation_task, item.workstation_id
 
 
 async def create_finished_goods_delivery(
@@ -199,7 +189,6 @@ async def create_finished_goods_delivery(
         defect_quantity=Decimal("0"),
         order_id=order.id,
         order_line_id=line.id,
-        resource_specification_id=operation_task.resource_specification_id,
         item_id=item.id,
         workstation_id=workstation_id,
         source_workstation_id=workstation_id,
@@ -222,12 +211,6 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
 
     for line_payload in payload.lines:
         item = await get_active_item(session, line_payload.item_id)
-        if await get_specification_for_item(session, line_payload.item_id) is None:
-            raise HTTPException(
-                status_code=422,
-                detail="Order line item has no resource specification",
-            )
-
         line = OrderLine(
             order_id=order.id,
             item_id=line_payload.item_id,
@@ -252,6 +235,14 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
                 operation_task,
                 workstation_id,
             )
+        else:
+            delivery_task = Task(
+                task_type="warehouse_delivery", status="waiting", description=f"Доставить со склада: {item.name}",
+                planned_quantity=line.quantity, actual_quantity=Decimal("0"), defect_quantity=Decimal("0"),
+                order_id=order.id, order_line_id=line.id, item_id=item.id,
+                workstation_id=None, target_workstation_id=None,
+            )
+            session.add(delivery_task)
 
     await session.refresh(order, attribute_names=["lines"])
     await activate_ready_tasks(session)

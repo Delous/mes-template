@@ -29,7 +29,7 @@ export default function NewOrderPage() {
     setError(null);
     try {
       const itemResponse = await getCatalog("items", 1, 100);
-      setItems(itemResponse.items.filter((item) => item.resource_specification));
+      setItems(itemResponse.items);
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {
@@ -69,7 +69,7 @@ export default function NewOrderPage() {
     <div className="page-content">
       <PageHeader
         title="Новый заказ"
-        description="После создания backend построит связанные задачи по ресурсным спецификациям."
+        description="После создания backend построит производственные или складские задачи по номенклатуре."
         action={
           <Button asChild variant="soft" color="gray">
             <Link href="/orders">

@@ -3,14 +3,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.db.models.order import OrderLine
-    from app.db.models.resource_specification import (
-        ResourceSpecification,
-        ResourceSpecificationInput,
-    )
+    from app.db.models.item_input import ItemInput
+    from app.db.models.operation_type import OperationType
     from app.db.models.task import Task
     from app.db.models.unit import Unit
+    from app.db.models.workstation import Workstation
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -19,8 +18,6 @@ from app.db.mixins import SoftDeleteMixin, TimestampMixin
 
 class Item(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "items"
-    __table_args__ = (Index("ix_items_name", "name"),)
-
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     is_product: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -29,20 +26,22 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
         nullable=False,
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operation_type_id: Mapped[int | None] = mapped_column(ForeignKey("operation_types.id"), nullable=True)
+    workstation_id: Mapped[int | None] = mapped_column(ForeignKey("workstations.id"), nullable=True)
+    output_quantity: Mapped[int | None] = mapped_column(nullable=True)
 
     unit: Mapped["Unit"] = relationship(
         back_populates="items",
     )
 
-    resource_specification: Mapped["ResourceSpecification | None"] = relationship(
-        back_populates="item",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        uselist=False,
+    operation_type: Mapped["OperationType | None"] = relationship()
+    workstation: Mapped["Workstation | None"] = relationship(back_populates="items")
+    inputs: Mapped[list["ItemInput"]] = relationship(
+        back_populates="item", cascade="all, delete-orphan", passive_deletes=True,
+        foreign_keys="ItemInput.item_id",
     )
-
-    resource_specification_inputs: Mapped[list["ResourceSpecificationInput"]] = relationship(
-        back_populates="item",
+    used_as_input_by: Mapped[list["ItemInput"]] = relationship(
+        back_populates="input_item", foreign_keys="ItemInput.input_item_id",
     )
 
     order_lines: Mapped[list["OrderLine"]] = relationship(
@@ -51,4 +50,11 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
 
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="item",
+    )
+
+    __table_args__ = (
+        Index("ix_items_name", "name"),
+        Index("ix_items_operation_type_id", "operation_type_id"),
+        Index("ix_items_workstation_id", "workstation_id"),
+        CheckConstraint("output_quantity IS NULL OR output_quantity >= 1", name="ck_items_output_quantity_positive"),
     )

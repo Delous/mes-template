@@ -57,7 +57,7 @@ class OrderLine(Base):
         ForeignKey("items.id"),
         nullable=False,
     )
-    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     order: Mapped["Order"] = relationship(
         back_populates="lines",
     )

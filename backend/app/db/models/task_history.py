@@ -42,11 +42,11 @@ class TaskHistory(Base):
     new_status: Mapped[str] = mapped_column(Text, nullable=False)
 
     actual_quantity_delta: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 6),
+        Numeric(18, 2),
         nullable=True,
     )
     defect_quantity_delta: Mapped[Decimal | None] = mapped_column(
-        Numeric(18, 6),
+        Numeric(18, 2),
         nullable=True,
     )
 

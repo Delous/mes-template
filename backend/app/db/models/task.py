@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.db.models.item import Item
     from app.db.models.order import Order, OrderLine
-    from app.db.models.resource_specification import ResourceSpecification
     from app.db.models.task_history import TaskHistory
     from app.db.models.user import User
     from app.db.models.workstation import Workstation
@@ -24,17 +23,17 @@ class Task(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     task_type: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    planned_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
+    planned_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
 
     actual_quantity: Mapped[Decimal] = mapped_column(
-        Numeric(18, 6),
+        Numeric(18, 2),
         nullable=False,
         default=0,
     )
 
     defect_quantity: Mapped[Decimal] = mapped_column(
-        Numeric(18, 6),
+        Numeric(18, 2),
         nullable=False,
         default=0,
     )
@@ -52,11 +51,6 @@ class Task(Base, TimestampMixin):
     order_line_id: Mapped[int] = mapped_column(
         ForeignKey("order_lines.id"),
         nullable=False,
-    )
-
-    resource_specification_id: Mapped[int | None] = mapped_column(
-        ForeignKey("resource_specifications.id"),
-        nullable=True,
     )
 
     workstation_id: Mapped[int | None] = mapped_column(
@@ -88,10 +82,6 @@ class Task(Base, TimestampMixin):
     )
 
     order_line: Mapped["OrderLine"] = relationship(
-        back_populates="tasks",
-    )
-
-    resource_specification: Mapped["ResourceSpecification | None"] = relationship(
         back_populates="tasks",
     )
 
@@ -136,7 +126,6 @@ class Task(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_tasks_order_id", "order_id"),
         Index("ix_tasks_order_line_id", "order_line_id"),
-        Index("ix_tasks_resource_specification_id", "resource_specification_id"),
         Index("ix_tasks_status", "status"),
         Index("ix_tasks_task_type", "task_type"),
         Index("ix_tasks_workstation_id", "workstation_id"),

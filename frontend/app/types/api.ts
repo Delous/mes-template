@@ -95,7 +95,12 @@ export type ItemDto = BaseCatalogDto & {
   unit: UnitSummary;
   description: string | null;
   is_product: boolean;
-  resource_specification: ResourceSpecificationDto | null;
+  operation_type_id: number | null;
+  workstation_id: number | null;
+  output_quantity: number | null;
+  operation_type: OperationTypeSummary | null;
+  workstation: WorkstationSummary | null;
+  inputs: ItemInputDto[];
 };
 
 export type ItemPayload = {
@@ -103,6 +108,10 @@ export type ItemPayload = {
   unit_id: number;
   description?: string | null;
   is_product?: boolean;
+  operation_type_id?: number | null;
+  workstation_id?: number | null;
+  output_quantity?: number | null;
+  inputs?: ItemInputPayload[];
 };
 
 export type ItemUpdatePayload = Partial<ItemPayload>;
@@ -124,38 +133,13 @@ export type OperationTypePayload = {
 
 export type OperationTypeUpdatePayload = Partial<OperationTypePayload>;
 
-export type ResourceSpecificationInputPayload = {
-  item_id: number;
+export type ItemInputPayload = {
+  input_item_id: number;
   quantity: string;
 };
-
-export type ResourceSpecificationInputDto = ResourceSpecificationInputPayload & {
+export type ItemInputDto = ItemInputPayload & {
   id: number;
-  item: ItemSummary;
-};
-
-export type ResourceSpecificationPayload = {
-  name: string;
-  operation_type_id: number;
-  workstation_id: number;
-  output_quantity: number;
-  inputs: ResourceSpecificationInputPayload[];
-};
-
-export type ResourceSpecificationDto = {
-  id: number;
-  item_id: number;
-  name: string;
-  operation_type_id: number;
-  workstation_id: number;
-  output_quantity: number;
-  operation_type: OperationTypeSummary;
-  workstation: WorkstationSummary;
-  inputs: ResourceSpecificationInputDto[];
-};
-
-export type ResourceSpecificationUpdatePayload = Partial<Omit<ResourceSpecificationPayload, "inputs">> & {
-  inputs?: ResourceSpecificationInputPayload[];
+  input_item: ItemSummary;
 };
 
 export type CatalogResource = "units" | "items" | "workstations" | "operation-types";
@@ -230,7 +214,6 @@ export type TaskDto = {
   order_id: number;
   order_line_id: number;
   item_id: number;
-  resource_specification_id: number | null;
   workstation_id: number | null;
   source_workstation_id: number | null;
   target_workstation_id: number | null;

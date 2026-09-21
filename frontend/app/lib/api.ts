@@ -14,14 +14,13 @@ import type {
   OrderDetailDto,
   MeDto,
   OrderDto,
-  ResourceSpecificationPayload,
-  ResourceSpecificationUpdatePayload,
   TaskDto,
   UpdateTaskPayload,
   UpdateUserPayload,
 } from "@/types/api";
 
-import * as mockApi from "./mock-api";
+// Kept as a switchable seam for local development. The production API is used by default.
+const mockApi: Record<string, (...args: any[]) => any> = {};
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -207,24 +206,6 @@ export async function updateCatalogItem<R extends CatalogResource>(
 ) {
   if (useMockApi) return mockApi.updateCatalogItem(resource, id, payload);
   const response = await apiClient.patch<CatalogDtoMap[R]>(`/api/v1/catalogs/${resource}/${id}`, payload);
-  return response.data;
-}
-
-export async function createResourceSpecification(itemId: number, payload: ResourceSpecificationPayload) {
-  if (useMockApi) return mockApi.createResourceSpecification(itemId, payload);
-  const response = await apiClient.post<CatalogDtoMap["items"]>(
-    `/api/v1/catalogs/items/${itemId}/resource-specification`,
-    payload,
-  );
-  return response.data;
-}
-
-export async function updateResourceSpecification(itemId: number, payload: ResourceSpecificationUpdatePayload) {
-  if (useMockApi) return mockApi.updateResourceSpecification(itemId, payload);
-  const response = await apiClient.patch<CatalogDtoMap["items"]>(
-    `/api/v1/catalogs/items/${itemId}/resource-specification`,
-    payload,
-  );
   return response.data;
 }
 
