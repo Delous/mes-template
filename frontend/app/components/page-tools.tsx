@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
-import { AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Box, Button, Callout, Flex, Heading, Spinner, Text } from '@radix-ui/themes';
+import { AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 
 export function PageHeader({
   title,
@@ -13,7 +13,13 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <Flex align={{ initial: "start", sm: "center" }} justify="between" gap="4" mb="5" direction={{ initial: "column", sm: "row" }}>
+    <Flex
+      align={{ initial: 'start', sm: 'center' }}
+      justify="between"
+      gap="4"
+      mb="5"
+      direction={{ initial: 'column', sm: 'row' }}
+    >
       <Box>
         <Heading size="7">{title}</Heading>
         {description ? (
@@ -40,7 +46,7 @@ export function ErrorNotice({ message }: { message: string | null }) {
   );
 }
 
-export function LoadingState({ label = "Загрузка" }: { label?: string }) {
+export function LoadingState({ label = 'Загрузка' }: { label?: string }) {
   return (
     <Flex className="surface empty-state" align="center" justify="center" gap="3">
       <Spinner />
@@ -49,7 +55,7 @@ export function LoadingState({ label = "Загрузка" }: { label?: string })
   );
 }
 
-export function EmptyState({ label = "Нет данных" }: { label?: string }) {
+export function EmptyState({ label = 'Нет данных' }: { label?: string }) {
   return (
     <Box className="surface" p="5">
       <Text color="gray">{label}</Text>
@@ -76,10 +82,22 @@ export function Pagination({
         Страница {page} из {pages} · Всего {total}
       </Text>
       <Flex gap="2">
-        <Button type="button" variant="soft" color="gray" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <Button
+          type="button"
+          variant="soft"
+          color="gray"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
           <ChevronLeft size={15} /> Назад
         </Button>
-        <Button type="button" variant="soft" color="gray" disabled={page >= pages} onClick={() => onPageChange(page + 1)}>
+        <Button
+          type="button"
+          variant="soft"
+          color="gray"
+          disabled={page >= pages}
+          onClick={() => onPageChange(page + 1)}
+        >
           Далее <ChevronRight size={15} />
         </Button>
       </Flex>
@@ -88,8 +106,8 @@ export function Pagination({
 }
 
 export function DeleteButton({
-  label = "Удалить",
-  confirmText = "Удалить запись?",
+  label = 'Удалить',
+  confirmText = 'Удалить запись?',
   disabled,
   onDelete,
 }: {
@@ -115,24 +133,28 @@ export function DeleteButton({
 }
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return "Не указано";
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  if (!value) return 'Не указано';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(value));
 }
 
 export function formatQuantity(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === "") return "Не указано";
+  if (value === null || value === undefined || value === '') return 'Не указано';
   const numeric = Number(value);
   if (Number.isNaN(numeric)) return String(value);
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(numeric);
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(numeric);
 }
 
 export function toDecimal(value: FormDataEntryValue | null, digits = 2) {
-  const numeric = Number(String(value ?? "").trim().replace(",", "."));
+  const numeric = Number(
+    String(value ?? '')
+      .trim()
+      .replace(',', '.'),
+  );
   return Number.isFinite(numeric) ? numeric.toFixed(digits) : (0).toFixed(digits);
 }

@@ -1,16 +1,23 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { Box, Button, Flex, Grid, Heading } from "@radix-ui/themes";
-import { ArrowLeft, Eye } from "lucide-react";
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { Box, Button, Flex, Grid, Heading } from '@radix-ui/themes';
+import { ArrowLeft, Eye } from 'lucide-react';
 
-import { useAuth } from "@/components/auth-context";
-import { TaskStatusBadge, TaskTypeBadge } from "@/components/task-status";
-import { DeleteButton, ErrorNotice, formatDate, formatQuantity, LoadingState, PageHeader } from "@/components/page-tools";
-import { deleteOrder, getCatalog, getOrder, normalizeApiError } from "@/lib/api";
-import type { ItemDto, OrderDetailDto } from "@/types/api";
+import { useAuth } from '@/components/auth-context';
+import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
+import {
+  DeleteButton,
+  ErrorNotice,
+  formatDate,
+  formatQuantity,
+  LoadingState,
+  PageHeader,
+} from '@/components/page-tools';
+import { deleteOrder, getCatalog, getOrder, normalizeApiError } from '@/lib/api';
+import type { ItemDto, OrderDetailDto } from '@/types/api';
 
 export default function OrderPage() {
   const params = useParams<{ id: string }>();
@@ -30,7 +37,7 @@ export default function OrderPage() {
     try {
       const [orderResponse, itemResponse] = await Promise.all([
         getOrder(orderId),
-        getCatalog("items", 1, 100),
+        getCatalog('items', 1, 100),
       ]);
       setOrder(orderResponse);
       setItems(itemResponse.items);
@@ -53,7 +60,7 @@ export default function OrderPage() {
 
     try {
       await deleteOrder(order.id);
-      router.replace("/orders");
+      router.replace('/orders');
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
       setDeleting(false);
@@ -63,11 +70,13 @@ export default function OrderPage() {
   return (
     <div className="page-content">
       <PageHeader
-        title={order ? `Заказ ${order.number}` : "Заказ"}
-        description={order ? `Статус: ${order.status} · Создан: ${formatDate(order.created_at)}` : undefined}
+        title={order ? `Заказ ${order.number}` : 'Заказ'}
+        description={
+          order ? `Статус: ${order.status} · Создан: ${formatDate(order.created_at)}` : undefined
+        }
         action={
           <Flex gap="2" wrap="wrap">
-            {order && user?.role === "admin" ? (
+            {order && user?.role === 'admin' ? (
               <DeleteButton
                 label="Удалить заказ"
                 confirmText={`Удалить заказ ${order.number} и все связанные задачи? Номенклатуры останутся в справочнике.`}
@@ -88,7 +97,7 @@ export default function OrderPage() {
       {loading ? (
         <LoadingState label="Загружаем заказ" />
       ) : order ? (
-        <Grid columns={{ initial: "1", md: "3" }} gap="4">
+        <Grid columns={{ initial: '1', md: '3' }} gap="4">
           <Box className="surface table-scroll order-lines-panel">
             <Box p="4" pb="0">
               <Heading size="4">Строки заказа</Heading>
@@ -105,7 +114,9 @@ export default function OrderPage() {
                 {order.lines.map((line) => (
                   <tr key={line.id}>
                     <td>{line.id}</td>
-                    <td>{items.find((item) => item.id === line.item_id)?.name ?? `#${line.item_id}`}</td>
+                    <td>
+                      {items.find((item) => item.id === line.item_id)?.name ?? `#${line.item_id}`}
+                    </td>
                     <td>{formatQuantity(line.quantity)}</td>
                   </tr>
                 ))}

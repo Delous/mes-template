@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Suspense } from "react";
-import { Box, Flex, Heading, Text } from "@radix-ui/themes";
-import { PackageCheck } from "lucide-react";
+import { Suspense } from 'react';
+import { Box, Flex, Heading, Text } from '@radix-ui/themes';
+import { PackageCheck } from 'lucide-react';
 
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from '@/components/login-form';
 
 export default function LoginPage() {
   return (

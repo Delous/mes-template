@@ -1,4 +1,4 @@
-import { FlatCompat } from "@eslint/eslintrc";
+import { FlatCompat } from '@eslint/eslintrc';
 
 const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
@@ -6,9 +6,9 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   {
-    ignores: [".next/**", "node_modules/**", "out/**", "dist/**", "src/**"],
+    ignores: ['.next/**', 'node_modules/**', 'out/**', 'dist/**', 'src/**'],
   },
-  ...compat.extends("next/core-web-vitals"),
+  ...compat.extends('next/core-web-vitals'),
 ];
 
 export default eslintConfig;

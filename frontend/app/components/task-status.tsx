@@ -1,32 +1,32 @@
-import { Badge } from "@radix-ui/themes";
+import { Badge } from '@radix-ui/themes';
 
-import type { TaskStatus, TaskType, TaskUpdateStatus } from "@/types/api";
+import type { TaskStatus, TaskType, TaskUpdateStatus } from '@/types/api';
 
 const statusLabels: Record<TaskUpdateStatus, string> = {
-  waiting: "Ожидает",
-  to_do: "К выполнению",
-  in_progress: "В работе",
-  blocked: "Заблокирована",
-  done: "Выполнена",
-  cancelled: "Отменена",
-  rejected: "Отклонена",
+  waiting: 'Ожидает',
+  to_do: 'К выполнению',
+  in_progress: 'В работе',
+  blocked: 'Заблокирована',
+  done: 'Выполнена',
+  cancelled: 'Отменена',
+  rejected: 'Отклонена',
 };
 
 const taskTypeLabels: Record<TaskType, string> = {
-  warehouse_delivery: "Доставка",
-  operation: "Операция",
-  quality_review: "ОТК",
-  transfer: "Перемещение",
+  warehouse_delivery: 'Доставка',
+  operation: 'Операция',
+  quality_review: 'ОТК',
+  transfer: 'Перемещение',
 };
 
-const colors: Record<TaskUpdateStatus, React.ComponentProps<typeof Badge>["color"]> = {
-  waiting: "gray",
-  to_do: "blue",
-  in_progress: "amber",
-  blocked: "red",
-  done: "green",
-  cancelled: "gray",
-  rejected: "red",
+const colors: Record<TaskUpdateStatus, React.ComponentProps<typeof Badge>['color']> = {
+  waiting: 'gray',
+  to_do: 'blue',
+  in_progress: 'amber',
+  blocked: 'red',
+  done: 'green',
+  cancelled: 'gray',
+  rejected: 'red',
 };
 
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {

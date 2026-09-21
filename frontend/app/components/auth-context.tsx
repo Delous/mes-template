@@ -1,39 +1,44 @@
-"use client";
+'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { getMe, login as loginRequest, logout as logoutRequest, normalizeApiError } from "@/lib/api";
-import type { AuthContextValue, AuthStatus } from "@/types/auth";
-import type { LoginPayload, MeDto } from "@/types/api";
+import {
+  getMe,
+  login as loginRequest,
+  logout as logoutRequest,
+  normalizeApiError,
+} from '@/lib/api';
+import type { AuthContextValue, AuthStatus } from '@/types/auth';
+import type { LoginPayload, MeDto } from '@/types/api';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<MeDto | null>(null);
-  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [status, setStatus] = useState<AuthStatus>('loading');
 
   const reloadUser = useCallback(async () => {
-    setStatus("loading");
+    setStatus('loading');
 
     try {
       const nextUser = await getMe();
       setUser(nextUser);
-      setStatus(nextUser ? "authenticated" : "anonymous");
+      setStatus(nextUser ? 'authenticated' : 'anonymous');
     } catch {
       setUser(null);
-      setStatus("anonymous");
+      setStatus('anonymous');
     }
   }, []);
 
   const login = useCallback(async (payload: LoginPayload) => {
     try {
       const nextUser = await loginRequest(payload);
-      if (!nextUser) throw new Error("Backend не вернул пользователя.");
+      if (!nextUser) throw new Error('Backend не вернул пользователя.');
       setUser(nextUser);
-      setStatus("authenticated");
+      setStatus('authenticated');
     } catch (error) {
       setUser(null);
-      setStatus("anonymous");
+      setStatus('anonymous');
       throw new Error(normalizeApiError(error));
     }
   }, []);
@@ -41,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await logoutRequest();
     setUser(null);
-    setStatus("anonymous");
+    setStatus('anonymous');
   }, []);
 
   useEffect(() => {
@@ -65,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const value = useContext(AuthContext);
   if (!value) {
-    throw new Error("useAuth must be used inside AuthProvider.");
+    throw new Error('useAuth must be used inside AuthProvider.');
   }
 
   return value;

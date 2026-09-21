@@ -1,6 +1,6 @@
-import type { LoginPayload, MeDto } from "./api";
+import type { LoginPayload, MeDto } from './api';
 
-export type AuthStatus = "loading" | "authenticated" | "anonymous";
+export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
 export type AuthContextValue = {
   user: MeDto | null;

@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Box, Button, Flex, Grid, Heading, Select, Text, TextField } from "@radix-ui/themes";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Box, Button, Flex, Grid, Heading, Select, Text, TextField } from '@radix-ui/themes';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 
-import { ErrorNotice, LoadingState, PageHeader, toDecimal } from "@/components/page-tools";
-import { createOrder, getCatalog, normalizeApiError } from "@/lib/api";
-import type { ItemDto, OrderLinePayload } from "@/types/api";
+import { ErrorNotice, LoadingState, PageHeader, toDecimal } from '@/components/page-tools';
+import { createOrder, getCatalog, normalizeApiError } from '@/lib/api';
+import type { ItemDto, OrderLinePayload } from '@/types/api';
 
 type DraftLine = {
   id: number;
@@ -28,7 +28,7 @@ export default function NewOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const itemResponse = await getCatalog("items", 1, 100);
+      const itemResponse = await getCatalog('items', 1, 100);
       setItems(itemResponse.items);
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
@@ -54,7 +54,7 @@ export default function NewOrderPage() {
 
     try {
       const order = await createOrder({
-        number: String(formData.get("number") ?? "").trim(),
+        number: String(formData.get('number') ?? '').trim(),
         lines: payloadLines,
       });
       router.replace(`/orders/${order.id}`);
@@ -85,10 +85,16 @@ export default function NewOrderPage() {
       ) : (
         <Box className="surface" p="4">
           <form onSubmit={handleSubmit}>
-            <Grid columns={{ initial: "1", md: "3" }} gap="3" mb="5">
+            <Grid columns={{ initial: '1', md: '3' }} gap="3" mb="5">
               <label>
                 <Text size="2">Номер заказа</Text>
-                <TextField.Root name="number" mt="2" required maxLength={128} placeholder="ORD-002" />
+                <TextField.Root
+                  name="number"
+                  mt="2"
+                  required
+                  maxLength={128}
+                  placeholder="ORD-002"
+                />
               </label>
             </Grid>
 
@@ -103,15 +109,20 @@ export default function NewOrderPage() {
                       variant="soft"
                       color="red"
                       disabled={lines.length === 1}
-                      onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}
+                      onClick={() =>
+                        setLines((current) => current.filter((item) => item.id !== line.id))
+                      }
                     >
                       <Trash2 size={15} /> Удалить
                     </Button>
                   </Flex>
-                  <Grid columns={{ initial: "1", md: "2" }} gap="3">
+                  <Grid columns={{ initial: '1', md: '2' }} gap="3">
                     <label>
                       <Text size="2">Номенклатура</Text>
-                      <Select.Root value={line.item_id} onValueChange={(value) => updateLine(line.id, { item_id: value }, setLines)}>
+                      <Select.Root
+                        value={line.item_id}
+                        onValueChange={(value) => updateLine(line.id, { item_id: value }, setLines)}
+                      >
                         <Select.Trigger mt="2" />
                         <Select.Content>
                           {items.map((item) => (
@@ -124,7 +135,13 @@ export default function NewOrderPage() {
                     </label>
                     <label>
                       <Text size="2">Количество</Text>
-                      <TextField.Root name={`quantity-${line.id}`} mt="2" inputMode="decimal" defaultValue={line.quantity} required />
+                      <TextField.Root
+                        name={`quantity-${line.id}`}
+                        mt="2"
+                        inputMode="decimal"
+                        defaultValue={line.quantity}
+                        required
+                      />
                     </label>
                   </Grid>
                 </Box>
@@ -132,7 +149,11 @@ export default function NewOrderPage() {
             </Flex>
 
             <Flex gap="3" mt="4" wrap="wrap">
-              <Button type="button" variant="soft" onClick={() => setLines((current) => [...current, newLine()])}>
+              <Button
+                type="button"
+                variant="soft"
+                onClick={() => setLines((current) => [...current, newLine()])}
+              >
                 <Plus size={16} /> Добавить строку
               </Button>
               <Button type="submit" disabled={submitting || lines.some((line) => !line.item_id)}>
@@ -147,7 +168,7 @@ export default function NewOrderPage() {
 }
 
 function newLine(): DraftLine {
-  return { id: Date.now() + Math.round(Math.random() * 1000), item_id: "", quantity: "1" };
+  return { id: Date.now() + Math.round(Math.random() * 1000), item_id: '', quantity: '1' };
 }
 
 function updateLine(

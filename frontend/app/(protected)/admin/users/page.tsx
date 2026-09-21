@@ -1,19 +1,36 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Badge, Box, Button, Callout, Flex, Grid, Heading, Spinner, Text, TextField } from "@radix-ui/themes";
-import { Save, UserPlus } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+import {
+  Badge,
+  Box,
+  Button,
+  Callout,
+  Flex,
+  Grid,
+  Heading,
+  Spinner,
+  Text,
+  TextField,
+} from '@radix-ui/themes';
+import { Save, UserPlus } from 'lucide-react';
 
-import { createAdminUser, getAdminUsers, getCatalog, normalizeApiError, updateAdminUser } from "@/lib/api";
-import type { AdminUserDto, EditableUserRole, UserRole, WorkstationDto } from "@/types/api";
+import {
+  createAdminUser,
+  getAdminUsers,
+  getCatalog,
+  normalizeApiError,
+  updateAdminUser,
+} from '@/lib/api';
+import type { AdminUserDto, EditableUserRole, UserRole, WorkstationDto } from '@/types/api';
 
 const roleLabels: Record<UserRole, string> = {
-  admin: "Администратор",
-  operator: "Оператор",
-  reviewer: "ОТК",
+  admin: 'Администратор',
+  operator: 'Оператор',
+  reviewer: 'ОТК',
 };
 
-const editableRoles: EditableUserRole[] = ["operator", "reviewer"];
+const editableRoles: EditableUserRole[] = ['operator', 'reviewer'];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
@@ -30,7 +47,7 @@ export default function UsersPage() {
     try {
       const [usersResponse, workstationResponse] = await Promise.all([
         getAdminUsers(),
-        getCatalog("workstations", 1, 100),
+        getCatalog('workstations', 1, 100),
       ]);
       setUsers(usersResponse.items);
       setWorkstations(workstationResponse.items);
@@ -55,9 +72,9 @@ export default function UsersPage() {
 
     try {
       const user = await createAdminUser({
-        full_name: String(formData.get("full_name") ?? "").trim(),
-        password: String(formData.get("password") ?? ""),
-        role: String(formData.get("role") ?? "operator") as EditableUserRole,
+        full_name: String(formData.get('full_name') ?? '').trim(),
+        password: String(formData.get('password') ?? ''),
+        role: String(formData.get('role') ?? 'operator') as EditableUserRole,
       });
       form.reset();
       setNotice(`Пользователь создан. Логин: ${user.username}`);
@@ -76,13 +93,13 @@ export default function UsersPage() {
     setNotice(null);
 
     const formData = new FormData(event.currentTarget);
-    const password = String(formData.get("password") ?? "");
+    const password = String(formData.get('password') ?? '');
 
     try {
       await updateAdminUser(userId, {
-        role: String(formData.get("role") ?? "operator") as EditableUserRole,
+        role: String(formData.get('role') ?? 'operator') as EditableUserRole,
         password: password || undefined,
-        workstation_ids: formData.getAll("workstation_ids").map(Number),
+        workstation_ids: formData.getAll('workstation_ids').map(Number),
       });
       await loadData();
     } catch (caughtError) {
@@ -111,7 +128,7 @@ export default function UsersPage() {
 
       <Box className="surface" p="4" mb="4">
         <form onSubmit={handleCreate}>
-          <Grid columns={{ initial: "1", md: "4" }} gap="3" align="end">
+          <Grid columns={{ initial: '1', md: '4' }} gap="3" align="end">
             <label>
               <Text size="2">ФИО</Text>
               <TextField.Root name="full_name" mt="2" required maxLength={256} />
@@ -163,7 +180,9 @@ export default function UsersPage() {
                   <td>{user.username}</td>
                   <td>{user.full_name}</td>
                   <td>
-                    <Badge color={user.role === "admin" ? "tomato" : "gray"}>{roleLabels[user.role]}</Badge>
+                    <Badge color={user.role === 'admin' ? 'tomato' : 'gray'}>
+                      {roleLabels[user.role]}
+                    </Badge>
                   </td>
                   <td>
                     <form id={`user-${user.id}`} onSubmit={(event) => handleUpdate(user.id, event)}>
@@ -171,7 +190,7 @@ export default function UsersPage() {
                         name="workstation_ids"
                         workstations={workstations}
                         selectedIds={user.workstations.map((workstation) => workstation.id)}
-                        disabled={user.role === "admin"}
+                        disabled={user.role === 'admin'}
                       />
                     </form>
                   </td>
@@ -182,7 +201,7 @@ export default function UsersPage() {
                       type="password"
                       placeholder="Новый пароль"
                       minLength={6}
-                      disabled={user.role === "admin"}
+                      disabled={user.role === 'admin'}
                     />
                   </td>
                   <td>
@@ -190,9 +209,9 @@ export default function UsersPage() {
                       <select
                         form={`user-${user.id}`}
                         name="role"
-                        required={user.role !== "admin"}
-                        disabled={user.role === "admin"}
-                        defaultValue={user.role === "admin" ? "operator" : user.role}
+                        required={user.role !== 'admin'}
+                        disabled={user.role === 'admin'}
+                        defaultValue={user.role === 'admin' ? 'operator' : user.role}
                       >
                         {editableRoles.map((role) => (
                           <option key={role} value={role}>
@@ -200,7 +219,13 @@ export default function UsersPage() {
                           </option>
                         ))}
                       </select>
-                      <Button form={`user-${user.id}`} type="submit" size="2" variant="soft" disabled={submitting || user.role === "admin"}>
+                      <Button
+                        form={`user-${user.id}`}
+                        type="submit"
+                        size="2"
+                        variant="soft"
+                        disabled={submitting || user.role === 'admin'}
+                      >
                         <Save size={15} /> Сохранить
                       </Button>
                     </Flex>
@@ -235,7 +260,13 @@ function WorkstationCheckboxes({
     <Flex gap="3" wrap="wrap" mt="3">
       {workstations.map((workstation) => (
         <Text as="label" size="2" key={workstation.id} className="checkbox-label">
-          <input type="checkbox" name={name} value={workstation.id} defaultChecked={selectedIds.includes(workstation.id)} disabled={disabled} />
+          <input
+            type="checkbox"
+            name={name}
+            value={workstation.id}
+            defaultChecked={selectedIds.includes(workstation.id)}
+            disabled={disabled}
+          />
           {workstation.name}
         </Text>
       ))}

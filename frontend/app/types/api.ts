@@ -1,5 +1,5 @@
-export type UserRole = "admin" | "operator" | "reviewer";
-export type EditableUserRole = Exclude<UserRole, "admin">;
+export type UserRole = 'admin' | 'operator' | 'reviewer';
+export type EditableUserRole = Exclude<UserRole, 'admin'>;
 
 export type ListResponse<T> = {
   items: T[];
@@ -46,7 +46,7 @@ export type UpdateUserPayload = {
   workstation_ids?: number[];
 };
 
-export type CatalogStatus = "active" | "inactive";
+export type CatalogStatus = 'active' | 'inactive';
 
 export type BaseCatalogDto = {
   id: number;
@@ -142,27 +142,27 @@ export type ItemInputDto = ItemInputPayload & {
   input_item: ItemSummary;
 };
 
-export type CatalogResource = "units" | "items" | "workstations" | "operation-types";
+export type CatalogResource = 'units' | 'items' | 'workstations' | 'operation-types';
 
 export type CatalogDtoMap = {
   units: UnitDto;
   items: ItemDto;
   workstations: WorkstationDto;
-  "operation-types": OperationTypeDto;
+  'operation-types': OperationTypeDto;
 };
 
 export type CatalogPayloadMap = {
   units: UnitPayload;
   items: ItemPayload;
   workstations: WorkstationPayload;
-  "operation-types": OperationTypePayload;
+  'operation-types': OperationTypePayload;
 };
 
 export type CatalogUpdatePayloadMap = {
   units: UnitUpdatePayload;
   items: ItemUpdatePayload;
   workstations: WorkstationUpdatePayload;
-  "operation-types": OperationTypeUpdatePayload;
+  'operation-types': OperationTypeUpdatePayload;
 };
 
 export type OrderLinePayload = {
@@ -194,9 +194,9 @@ export type OrderDetailDto = OrderDto & {
   tasks: TaskDto[];
 };
 
-export type TaskType = "warehouse_delivery" | "operation" | "quality_review" | "transfer";
-export type TaskStatus = "waiting" | "to_do" | "in_progress" | "blocked" | "done" | "cancelled";
-export type TaskUpdateStatus = TaskStatus | "rejected";
+export type TaskType = 'warehouse_delivery' | 'operation' | 'quality_review' | 'transfer';
+export type TaskStatus = 'waiting' | 'to_do' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
+export type TaskUpdateStatus = TaskStatus | 'rejected';
 
 export type TaskWorkstationDto = {
   id: number;

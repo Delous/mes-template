@@ -1,13 +1,21 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { Badge, Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
-import { Eye, Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Badge, Box, Button, Flex, Heading, Text } from '@radix-ui/themes';
+import { Eye, Plus } from 'lucide-react';
 
-import { EmptyState, ErrorNotice, formatDate, formatQuantity, LoadingState, PageHeader, Pagination } from "@/components/page-tools";
-import { getOrders, normalizeApiError } from "@/lib/api";
-import type { OrderDto } from "@/types/api";
+import {
+  EmptyState,
+  ErrorNotice,
+  formatDate,
+  formatQuantity,
+  LoadingState,
+  PageHeader,
+  Pagination,
+} from '@/components/page-tools';
+import { getOrders, normalizeApiError } from '@/lib/api';
+import type { OrderDto } from '@/types/api';
 
 const pageSize = 20;
 
@@ -78,7 +86,10 @@ export default function OrdersPage() {
                       <Badge>{order.status}</Badge>
                     </td>
                     <td>
-                      {order.lines.length} · {formatQuantity(order.lines.reduce((sum, line) => sum + Number(line.quantity), 0))}
+                      {order.lines.length} ·{' '}
+                      {formatQuantity(
+                        order.lines.reduce((sum, line) => sum + Number(line.quantity), 0),
+                      )}
                     </td>
                     <td>{formatDate(order.created_at)}</td>
                     <td>

@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Flex, Spinner, Text } from "@radix-ui/themes";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Flex, Spinner, Text } from '@radix-ui/themes';
 
-import { useAuth } from "@/components/auth-context";
+import { useAuth } from '@/components/auth-context';
 
 export default function HomePage() {
   const { status } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/tasks");
+    if (status === 'authenticated') {
+      router.replace('/tasks');
     }
 
-    if (status === "anonymous") {
-      router.replace("/login");
+    if (status === 'anonymous') {
+      router.replace('/login');
     }
   }, [router, status]);
 

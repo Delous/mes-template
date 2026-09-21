@@ -1,13 +1,19 @@
-"use client";
+'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Box, Button, Flex, Grid, Text, TextField } from "@radix-ui/themes";
-import { Plus, Save } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { Box, Button, Flex, Grid, Text, TextField } from '@radix-ui/themes';
+import { Plus, Save } from 'lucide-react';
 
-import { CatalogNav } from "@/components/catalog-nav";
-import { EmptyState, ErrorNotice, LoadingState, PageHeader, Pagination } from "@/components/page-tools";
-import { createCatalogItem, getCatalog, normalizeApiError, updateCatalogItem } from "@/lib/api";
-import type { WorkstationDto } from "@/types/api";
+import { CatalogNav } from '@/components/catalog-nav';
+import {
+  EmptyState,
+  ErrorNotice,
+  LoadingState,
+  PageHeader,
+  Pagination,
+} from '@/components/page-tools';
+import { createCatalogItem, getCatalog, normalizeApiError, updateCatalogItem } from '@/lib/api';
+import type { WorkstationDto } from '@/types/api';
 
 const pageSize = 20;
 
@@ -23,7 +29,7 @@ export default function WorkstationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await getCatalog("workstations", page, pageSize);
+      const response = await getCatalog('workstations', page, pageSize);
       setItems(response.items);
       setTotal(response.total);
     } catch (caughtError) {
@@ -55,8 +61,8 @@ export default function WorkstationsPage() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     await run(async () => {
-      await createCatalogItem("workstations", {
-        name: String(formData.get("name") ?? "").trim(),
+      await createCatalogItem('workstations', {
+        name: String(formData.get('name') ?? '').trim(),
       });
       form.reset();
     });
@@ -66,8 +72,8 @@ export default function WorkstationsPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     await run(() =>
-      updateCatalogItem("workstations", item.id, {
-        name: String(formData.get("name") ?? "").trim(),
+      updateCatalogItem('workstations', item.id, {
+        name: String(formData.get('name') ?? '').trim(),
       }),
     );
   }
@@ -80,7 +86,7 @@ export default function WorkstationsPage() {
 
       <Box className="surface" p="4" mb="4">
         <form onSubmit={handleCreate}>
-          <Grid columns={{ initial: "1", md: "3" }} gap="3" align="end">
+          <Grid columns={{ initial: '1', md: '3' }} gap="3" align="end">
             <label>
               <Text size="2">Название</Text>
               <TextField.Root name="name" mt="2" required maxLength={256} />
@@ -110,10 +116,17 @@ export default function WorkstationsPage() {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <TextField.Root form={`workstation-${item.id}`} name="name" defaultValue={item.name} />
+                      <TextField.Root
+                        form={`workstation-${item.id}`}
+                        name="name"
+                        defaultValue={item.name}
+                      />
                     </td>
                     <td>
-                      <form id={`workstation-${item.id}`} onSubmit={(event) => handleUpdate(item, event)}>
+                      <form
+                        id={`workstation-${item.id}`}
+                        onSubmit={(event) => handleUpdate(item, event)}
+                      >
                         <Flex gap="2">
                           <Button size="2" variant="soft" type="submit" disabled={submitting}>
                             <Save size={15} /> Сохранить

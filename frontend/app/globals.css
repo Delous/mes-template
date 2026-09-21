@@ -177,8 +177,7 @@ select {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
-    var(--gray-2);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)), var(--gray-2);
 }
 
 .login-panel {
@@ -225,6 +224,34 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.item-editor-primary-row,
+.item-editor-production-row {
+  display: grid;
+  gap: 12px;
+}
+
+.item-editor-primary-row {
+  grid-template-columns: 4fr 1fr;
+}
+
+.item-editor-production-row {
+  grid-template-columns: 2fr 2fr 1fr;
+  margin-top: 12px;
+}
+
+.item-editor-description {
+  display: block;
+  margin-top: 12px;
+}
+
+.item-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .grow-field {
@@ -433,5 +460,15 @@ select {
 
   .page-content {
     padding: 18px 14px 26px;
+  }
+
+  .item-editor-primary-row,
+  .item-editor-production-row {
+    grid-template-columns: 1fr;
+  }
+
+  .item-editor-actions {
+    align-items: flex-start;
+    flex-direction: column-reverse;
   }
 }

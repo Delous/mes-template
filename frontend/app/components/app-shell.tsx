@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Badge, Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
-import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users } from "lucide-react";
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { Badge, Box, Button, Flex, Heading, Text } from '@radix-ui/themes';
+import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users } from 'lucide-react';
 
-import { useAuth } from "./auth-context";
+import { useAuth } from './auth-context';
 
 type NavigationItem = {
   href: string;
@@ -17,31 +17,36 @@ type NavigationItem = {
 };
 
 const navigation: NavigationItem[] = [
-  { href: "/tasks", label: "Задачи", icon: <ClipboardList size={18} /> },
-  { href: "/orders", label: "Заказы", icon: <ShoppingCart size={18} /> },
-  { href: "/catalogs/units", label: "Справочники", icon: <Database size={18} />, activePrefix: "/catalogs" },
-  { href: "/admin/users", label: "Пользователи", icon: <Users size={18} />, adminOnly: true },
+  { href: '/tasks', label: 'Задачи', icon: <ClipboardList size={18} /> },
+  { href: '/orders', label: 'Заказы', icon: <ShoppingCart size={18} /> },
+  {
+    href: '/catalogs/units',
+    label: 'Справочники',
+    icon: <Database size={18} />,
+    activePrefix: '/catalogs',
+  },
+  { href: '/admin/users', label: 'Пользователи', icon: <Users size={18} />, adminOnly: true },
 ];
 
 const roleLabels = {
-  admin: "Администратор",
-  operator: "Оператор",
-  reviewer: "ОТК",
+  admin: 'Администратор',
+  operator: 'Оператор',
+  reviewer: 'ОТК',
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { logout, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const visibleNavigation = navigation.filter((item) => !item.adminOnly || user?.role === "admin");
+  const visibleNavigation = navigation.filter((item) => !item.adminOnly || user?.role === 'admin');
 
   const pageTitle = useMemo(() => {
-    return visibleNavigation.find((item) => pathname.startsWith(item.href))?.label ?? "DevIT";
+    return visibleNavigation.find((item) => pathname.startsWith(item.href))?.label ?? 'DevIT';
   }, [pathname, visibleNavigation]);
 
   async function handleLogout() {
     await logout();
-    router.replace("/login");
+    router.replace('/login');
   }
 
   return (
@@ -65,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`nav-link ${isActive(pathname, item) ? "active" : ""}`}
+                className={`nav-link ${isActive(pathname, item) ? 'active' : ''}`}
               >
                 {item.icon}
                 <Text size="2" weight="medium">
@@ -80,9 +85,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Text size="2" weight="medium">
                 {user?.full_name}
               </Text>
-              {user ? <Badge color={user.role === "admin" ? "tomato" : "gray"}>{roleLabels[user.role]}</Badge> : null}
+              {user ? (
+                <Badge color={user.role === 'admin' ? 'tomato' : 'gray'}>
+                  {roleLabels[user.role]}
+                </Badge>
+              ) : null}
             </Flex>
-            <Button type="button" variant="soft" color="gray" className="logout-button" onClick={handleLogout}>
+            <Button
+              type="button"
+              variant="soft"
+              color="gray"
+              className="logout-button"
+              onClick={handleLogout}
+            >
               <LogOut size={16} />
               Выйти
             </Button>
