@@ -13,7 +13,7 @@ import {
   TextArea,
   TextField,
 } from '@radix-ui/themes';
-import { ChevronRight, GitBranch, Plus, Save, Trash2 } from 'lucide-react';
+import { ChevronRight, GitBranch, Package, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { CatalogNav } from '@/components/catalog-nav';
 import {
   EmptyState,
@@ -51,7 +51,12 @@ type ItemDraft = {
   output_quantity: string;
   inputs: DraftInput[];
 };
-type TreeNode = { item: ItemDto; repeated: boolean; children: TreeNode[] };
+type TreeNode = {
+  item: ItemDto;
+  quantity: string | null;
+  repeated: boolean;
+  children: TreeNode[];
+};
 
 export default function ItemsPage() {
   const [items, setItems] = useState<ItemDto[]>([]);
@@ -337,7 +342,7 @@ export default function ItemsPage() {
                       columns={{ initial: '1', md: '1fr 160px 110px' }}
                       gap="2"
                       align="end"
-                      className={cycleId === input.input_item_id ? 'conflict-row' : ''}
+                      className={`material-row${cycleId === input.input_item_id ? ' conflict-row' : ''}`}
                     >
                       <SelectField
                         label="Номенклатура"
@@ -401,7 +406,18 @@ export default function ItemsPage() {
                   Добавить материал
                 </Button>
               </Box>
-              {treeVisible && tree && <Tree node={tree} onOpen={openById} />}
+              {treeVisible && tree && (
+                <Box className="surface specification-tree" p="4">
+                  <Flex align="center" gap="2" mb="3">
+                    <GitBranch size={18} />
+                    <Text size="3" weight="medium">Дерево спецификации</Text>
+                  </Flex>
+                  <Text as="p" size="2" color="gray" mb="4">
+                    Нажмите на позицию, чтобы открыть её карточку.
+                  </Text>
+                  <Tree node={tree} onOpen={openById} root />
+                </Box>
+              )}
             </Flex>
           )}
         </Dialog.Content>
@@ -459,7 +475,7 @@ function Field({
   onChange: (v: string) => void;
 }) {
   return (
-    <label>
+    <label className="form-field">
       <Text size="2">{label}</Text>
       <TextField.Root mt="2" value={value} onChange={(e) => onChange(e.target.value)} required />
     </label>
@@ -478,11 +494,11 @@ function SelectField({
   onChange: (v: string) => void;
 }) {
   return (
-    <label>
+    <label className="form-field">
       <Text size="2">{label}</Text>
       <Select.Root value={value} onValueChange={onChange}>
-        <Select.Trigger mt="2" />
-        <Select.Content>
+        <Select.Trigger className="catalog-select-trigger" mt="2" />
+        <Select.Content position="popper">
           {options.map((x) => (
             <Select.Item key={x.id} value={String(x.id)}>
               {x.name}
@@ -506,14 +522,14 @@ function NullableSelect({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <label>
+    <label className="form-field">
       <Text size="2">{label}</Text>
       <Select.Root
         value={value ? String(value) : 'none'}
         onValueChange={(v) => onChange(v === 'none' ? null : Number(v))}
       >
-        <Select.Trigger mt="2" />
-        <Select.Content>
+        <Select.Trigger className="catalog-select-trigger" mt="2" />
+        <Select.Content position="popper">
           <Select.Item value="none">Не указано</Select.Item>
           {options.map((x) => (
             <Select.Item key={x.id} value={String(x.id)}>
@@ -525,37 +541,66 @@ function NullableSelect({
     </label>
   );
 }
-async function buildTree(item: ItemDto, visited = new Set<number>()): Promise<TreeNode> {
-  if (visited.has(item.id)) return { item, repeated: true, children: [] };
+async function buildTree(
+  item: ItemDto,
+  visited = new Set<number>(),
+  quantity: string | null = null,
+): Promise<TreeNode> {
+  if (visited.has(item.id)) return { item, quantity, repeated: true, children: [] };
   const next = new Set(visited);
   next.add(item.id);
   const children = await Promise.all(
     item.inputs.map(async (input) =>
-      buildTree(await getCatalogItem('items', input.input_item_id), next),
+      buildTree(await getCatalogItem('items', input.input_item_id), next, input.quantity),
     ),
   );
-  return { item, repeated: false, children };
+  return { item, quantity, repeated: false, children };
 }
-function Tree({ node, onOpen }: { node: TreeNode; onOpen: (id: number) => void }) {
-  const meta =
-    node.item.operation_type && node.item.output_quantity
-      ? `${node.item.operation_type.name} · ${node.item.output_quantity} ${node.item.unit.symbol}`
-      : 'Не указано';
+function Tree({
+  node,
+  onOpen,
+  root = false,
+}: {
+  node: TreeNode;
+  onOpen: (id: number) => void;
+  root?: boolean;
+}) {
+  const details = [node.item.operation_type?.name, node.item.workstation?.name].filter(Boolean);
+
   return (
-    <Box className="nested-block" p="3">
+    <div className={`spec-tree-branch${root ? ' spec-tree-root' : ''}`}>
       <button type="button" className="spec-tree-row" onClick={() => onOpen(node.item.id)}>
-        <Box className="spec-tree-copy">
+        <span className="spec-tree-icon" aria-hidden="true">
+          {node.repeated ? <RotateCcw size={16} /> : <Package size={16} />}
+        </span>
+        <span className="spec-tree-copy">
+          <span className="spec-tree-title">
+            <Text size="2" weight="medium">{node.item.name}</Text>
+            {node.repeated && <Text size="1" className="spec-tree-badge">Повтор</Text>}
+          </span>
+          <Text as="span" size="1" color="gray" className="spec-tree-meta">
+            {details.length ? details.join(' · ') : 'Операция и рабочий пост не указаны'}
+          </Text>
+        </span>
+        <span className="spec-tree-quantity">
+          <Text size="1" color="gray">{root ? 'Выпуск' : 'Количество'}</Text>
           <Text size="2" weight="medium">
-            {node.item.name}
+            {root
+              ? node.item.output_quantity
+                ? `${node.item.output_quantity} ${node.item.unit.symbol}`
+                : '—'
+              : `${node.quantity} ${node.item.unit.symbol}`}
           </Text>
-          <Text as="p" size="1" color="gray" className="spec-tree-meta">
-            {meta}
-          </Text>
-        </Box>
+        </span>
+        <ChevronRight className="spec-tree-open-icon" size={16} aria-hidden="true" />
       </button>
-      {node.children.map((child, index) => (
-        <Tree key={`${node.item.id}-${child.item.id}-${index}`} node={child} onOpen={onOpen} />
-      ))}
-    </Box>
+      {!!node.children.length && (
+        <div className="spec-tree-children">
+          {node.children.map((child, index) => (
+            <Tree key={`${node.item.id}-${child.item.id}-${index}`} node={child} onOpen={onOpen} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

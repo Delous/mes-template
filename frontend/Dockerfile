@@ -35,6 +35,3 @@ USER nextjs
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-
-# docker build -t delous/mes-frontend .
-# docker push delous/mes-frontend
