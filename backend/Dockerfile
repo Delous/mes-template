@@ -12,6 +12,3 @@ COPY . .
 
 # Запускаем скрипт
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# docker build -t delous/mes-backend .
-# docker push delous/mes-backend

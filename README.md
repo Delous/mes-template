@@ -1,7 +1,7 @@
 # Чтобы собрать и запушить образы
 
 ```
-cd backend && docker build -t delous/pervolit-backend . && docker push delous/pervolit-backend && cd ../frontend && docker build -t delous/pervolit-frontend . && docker push delous/pervolit-frontend
+cd backend && docker build -t delous/mes-backend . && docker push delous/mes-backend && cd ../frontend && docker build -t delous/mes-frontend . && docker push delous/mes-frontend
 ```
 
 ```
