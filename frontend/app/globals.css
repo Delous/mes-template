@@ -241,12 +241,18 @@ select {
   margin-top: 12px;
 }
 
+.form-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .form-field,
 .material-row > * {
   min-width: 0;
 }
 
-.catalog-select-trigger {
+.form-field .catalog-select-trigger {
   width: 100%;
   min-width: 0;
   max-width: 100%;
