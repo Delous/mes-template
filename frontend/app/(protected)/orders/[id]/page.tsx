@@ -16,7 +16,7 @@ import {
   LoadingState,
   PageHeader,
 } from '@/components/page-tools';
-import { deleteOrder, getCatalog, getOrder, normalizeApiError } from '@/lib/api';
+import { deleteOrder, getAllItems, getOrder, normalizeApiError } from '@/lib/api';
 import type { ItemDto, OrderDetailDto } from '@/types/api';
 
 export default function OrderPage() {
@@ -37,10 +37,10 @@ export default function OrderPage() {
     try {
       const [orderResponse, itemResponse] = await Promise.all([
         getOrder(orderId),
-        getCatalog('items', 1, 100),
+        getAllItems(false),
       ]);
       setOrder(orderResponse);
-      setItems(itemResponse.items);
+      setItems(itemResponse);
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {

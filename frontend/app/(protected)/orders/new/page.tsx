@@ -7,12 +7,13 @@ import { Box, Button, Flex, Grid, Heading, Select, Text, TextField } from '@radi
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 
 import { ErrorNotice, LoadingState, PageHeader, toDecimal } from '@/components/page-tools';
-import { createOrder, getCatalog, normalizeApiError } from '@/lib/api';
+import { createOrder, getAllItems, normalizeApiError } from '@/lib/api';
 import type { ItemDto, OrderLinePayload } from '@/types/api';
 
 type DraftLine = {
   id: number;
   item_id: string;
+  main_id: string;
   quantity: string;
 };
 
@@ -28,8 +29,7 @@ export default function NewOrderPage() {
     setLoading(true);
     setError(null);
     try {
-      const itemResponse = await getCatalog('items', 1, 100);
-      setItems(itemResponse.items);
+      setItems(await getAllItems());
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {
@@ -117,11 +117,13 @@ export default function NewOrderPage() {
                     </Button>
                   </Flex>
                   <Grid columns={{ initial: '1', md: '2' }} gap="3">
-                    <label>
-                      <Text size="2">Номенклатура</Text>
+                    <label className="form-field">
+                      <Text size="2">Главная номенклатура</Text>
                       <Select.Root
-                        value={line.item_id}
-                        onValueChange={(value) => updateLine(line.id, { item_id: value }, setLines)}
+                        value={line.main_id}
+                        onValueChange={(value) =>
+                          updateLine(line.id, { main_id: value, item_id: value }, setLines)
+                        }
                       >
                         <Select.Trigger mt="2" />
                         <Select.Content>
@@ -133,6 +135,30 @@ export default function NewOrderPage() {
                         </Select.Content>
                       </Select.Root>
                     </label>
+                    {items.find((item) => String(item.id) === line.main_id)?.variants.length ? (
+                      <label className="form-field">
+                        <Text size="2">Номенклатура из группы</Text>
+                        <Select.Root
+                          value={line.item_id}
+                          onValueChange={(value) =>
+                            updateLine(line.id, { item_id: value }, setLines)
+                          }
+                        >
+                          <Select.Trigger mt="2" />
+                          <Select.Content>
+                            {items
+                              .filter((item) => String(item.id) === line.main_id)
+                              .flatMap((item) => [item, ...item.variants])
+                              .map((item) => (
+                                <Select.Item key={item.id} value={String(item.id)}>
+                                  {item.name}
+                                  {item.is_main ? ' (главная)' : ''}
+                                </Select.Item>
+                              ))}
+                          </Select.Content>
+                        </Select.Root>
+                      </label>
+                    ) : null}
                     <label>
                       <Text size="2">Количество</Text>
                       <TextField.Root
@@ -168,7 +194,12 @@ export default function NewOrderPage() {
 }
 
 function newLine(): DraftLine {
-  return { id: Date.now() + Math.round(Math.random() * 1000), item_id: '', quantity: '1' };
+  return {
+    id: Date.now() + Math.round(Math.random() * 1000),
+    item_id: '',
+    main_id: '',
+    quantity: '1',
+  };
 }
 
 function updateLine(

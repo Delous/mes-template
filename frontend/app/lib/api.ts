@@ -181,6 +181,7 @@ export async function getCatalog<R extends CatalogResource>(
   size = 20,
   includeDeleted = false,
   onlyProducts = false,
+  grouped = true,
 ) {
   if (useMockApi) return mockApi.getCatalog(resource, page, size, includeDeleted, onlyProducts);
   const params: Record<string, string | number | boolean> = {
@@ -188,6 +189,7 @@ export async function getCatalog<R extends CatalogResource>(
     size,
     include_deleted: includeDeleted,
   };
+  if (resource === 'items') params.grouped = grouped;
   if (resource === 'items' && onlyProducts) params.is_product = true;
   const response = await apiClient.get<ListResponse<CatalogDtoMap[R]>>(
     `/api/v1/catalogs/${resource}`,
@@ -249,4 +251,21 @@ export async function updateAdminUser(id: number, payload: UpdateUserPayload) {
   if (useMockApi) return mockApi.updateAdminUser(id, payload);
   const response = await apiClient.patch<AdminUserDto>(`/api/v1/admin/users/${id}`, payload);
   return response.data;
+}
+
+export async function itemAction(id: number, action: 'copy' | 'variants' | 'make-main') {
+  const response = await apiClient.post<CatalogDtoMap['items']>(
+    `/api/v1/catalogs/items/${id}/${action}`,
+  );
+  return response.data;
+}
+
+export async function getAllItems(grouped = true) {
+  const items: CatalogDtoMap['items'][] = [];
+  let page = 1;
+  while (true) {
+    const response = await getCatalog('items', page++, 100, false, false, grouped);
+    items.push(...response.items);
+    if (items.length >= response.total || !response.items.length) return items;
+  }
 }

@@ -91,6 +91,9 @@ export type OperationTypeSummary = {
 };
 
 export type ItemDto = BaseCatalogDto & {
+  group_uuid: string;
+  is_main: boolean;
+  variants: ItemDto[];
   unit_id: number;
   unit: UnitSummary;
   description: string | null;

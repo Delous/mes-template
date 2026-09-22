@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -25,6 +25,8 @@ import {
 } from '@/components/page-tools';
 import {
   createCatalogItem,
+  getAllItems,
+  itemAction,
   getCatalog,
   getCatalogItem,
   normalizeApiError,
@@ -85,14 +87,14 @@ export default function ItemsPage() {
     try {
       const [listed, all, us, ops, posts] = await Promise.all([
         getCatalog('items', page, pageSize, false, onlyProducts),
-        getCatalog('items', 1, 100),
+        getAllItems(false),
         getCatalog('units', 1, 100),
         getCatalog('operation-types', 1, 100),
         getCatalog('workstations', 1, 100),
       ]);
       setItems(listed.items);
       setTotal(listed.total);
-      setAllItems(all.items);
+      setAllItems(all);
       setUnits(us.items);
       setOperationTypes(ops.items);
       setWorkstations(posts.items);
@@ -161,6 +163,19 @@ export default function ItemsPage() {
       setSubmitting(false);
     }
   }
+  async function runAction(action: 'copy' | 'variants' | 'make-main') {
+    if (!editorItem) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      openItem(await itemAction(editorItem.id, action));
+      await load();
+    } catch (e) {
+      setError(normalizeApiError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  }
   async function showTree() {
     if (!editorItem) return;
     setTreeVisible(true);
@@ -213,23 +228,66 @@ export default function ItemsPage() {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <Text weight="medium">{item.name}</Text>
-                    </td>
-                    <td>{item.unit.symbol}</td>
-                    <td>
-                      <Text color={item.description ? undefined : 'gray'}>
-                        {item.description || 'Описание не указано'}
-                      </Text>
-                    </td>
-                    <td>{item.is_product ? 'Да' : 'Нет'}</td>
-                    <td>
-                      <Button size="2" variant="soft" onClick={() => openItem(item)}>
-                        Открыть <ChevronRight size={15} />
-                      </Button>
-                    </td>
-                  </tr>
+                  <Fragment key={item.id}>
+                    <tr>
+                      <td>
+                        <Text weight="medium">{item.name}</Text>
+                      </td>
+                      <td>{item.unit.symbol}</td>
+                      <td>
+                        <Text color={item.description ? undefined : 'gray'}>
+                          {item.description || 'Описание не указано'}
+                        </Text>
+                      </td>
+                      <td>{item.is_product ? 'Да' : 'Нет'}</td>
+                      <td>
+                        <Button size="2" variant="soft" onClick={() => openItem(item)}>
+                          Открыть <ChevronRight size={15} />
+                        </Button>
+                      </td>
+                    </tr>
+                    {!!item.variants.length && (
+                      <tr>
+                        <td colSpan={5}>
+                          <details>
+                            <summary style={{ cursor: 'pointer' }}>
+                              Варианты ({item.variants.length})
+                            </summary>
+                            <table className="data-table" aria-label={`Варианты ${item.name}`}>
+                              <thead>
+                                <tr>
+                                  <th>Название</th>
+                                  <th>Единица</th>
+                                  <th>Описание</th>
+                                  <th>Изделие</th>
+                                  <th />
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {item.variants.map((variant) => (
+                                  <tr key={variant.id}>
+                                    <td>{variant.name}</td>
+                                    <td>{variant.unit.symbol}</td>
+                                    <td>{variant.description || 'Описание не указано'}</td>
+                                    <td>{variant.is_product ? 'Да' : 'Нет'}</td>
+                                    <td>
+                                      <Button
+                                        size="2"
+                                        variant="soft"
+                                        onClick={() => openItem(variant)}
+                                      >
+                                        Открыть <ChevronRight size={15} />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </details>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -247,8 +305,9 @@ export default function ItemsPage() {
           }
         }}
       >
-        <Dialog.Content maxWidth="820px">
+        <Dialog.Content maxWidth="1000px">
           <Dialog.Title>{editorItem ? 'Номенклатура' : 'Новая номенклатура'}</Dialog.Title>
+          <ErrorNotice message={error} />
           {draft && (
             <Flex direction="column" gap="4">
               <Box className="surface" p="4">
@@ -279,7 +338,7 @@ export default function ItemsPage() {
                     options={workstations}
                     onChange={(value) => setDraft({ ...draft, workstation_id: value })}
                   />
-                  <label>
+                  <label className="form-field">
                     <Text size="2">Количество</Text>
                     <TextField.Root
                       mt="2"
@@ -318,6 +377,24 @@ export default function ItemsPage() {
                         {treeVisible ? 'Скрыть дерево' : 'Просмотреть дерево'}
                       </Button>
                     )}
+                    {editorItem && (
+                      <>
+                        <Button
+                          variant="soft"
+                          disabled={submitting}
+                          onClick={() => runAction('copy')}
+                        >
+                          Скопировать
+                        </Button>
+                        <Button
+                          variant="soft"
+                          disabled={submitting}
+                          onClick={() => runAction('variants')}
+                        >
+                          Создать вариант
+                        </Button>
+                      </>
+                    )}
                   </Flex>
                   <Text as="label" size="2" className="checkbox-label">
                     <Checkbox
@@ -331,6 +408,18 @@ export default function ItemsPage() {
                 </div>
               </Box>
 
+              {editorItem &&
+                (editorItem.is_main ? (
+                  <Text size="2">✓ Главная номенклатура</Text>
+                ) : (
+                  <Button
+                    variant="soft"
+                    disabled={submitting}
+                    onClick={() => runAction('make-main')}
+                  >
+                    Сделать главной номенклатурой
+                  </Button>
+                ))}
               <Box className="surface" p="4">
                 <Text size="2" weight="medium">
                   Материалы
@@ -410,7 +499,9 @@ export default function ItemsPage() {
                 <Box className="surface specification-tree" p="4">
                   <Flex align="center" gap="2" mb="3">
                     <GitBranch size={18} />
-                    <Text size="3" weight="medium">Дерево спецификации</Text>
+                    <Text size="3" weight="medium">
+                      Дерево спецификации
+                    </Text>
                   </Flex>
                   <Text as="p" size="2" color="gray" mb="4">
                     Нажмите на позицию, чтобы открыть её карточку.
@@ -575,15 +666,23 @@ function Tree({
         </span>
         <span className="spec-tree-copy">
           <span className="spec-tree-title">
-            <Text size="2" weight="medium">{node.item.name}</Text>
-            {node.repeated && <Text size="1" className="spec-tree-badge">Повтор</Text>}
+            <Text size="2" weight="medium">
+              {node.item.name}
+            </Text>
+            {node.repeated && (
+              <Text size="1" className="spec-tree-badge">
+                Повтор
+              </Text>
+            )}
           </span>
           <Text as="span" size="1" color="gray" className="spec-tree-meta">
             {details.length ? details.join(' · ') : 'Операция и рабочий пост не указаны'}
           </Text>
         </span>
         <span className="spec-tree-quantity">
-          <Text size="1" color="gray">{root ? 'Выпуск' : 'Количество'}</Text>
+          <Text size="1" color="gray">
+            {root ? 'Выпуск' : 'Количество'}
+          </Text>
           <Text size="2" weight="medium">
             {root
               ? node.item.output_quantity
