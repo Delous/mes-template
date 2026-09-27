@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 from app.catalogs.common.schema import ItemSummary, ListResponse, OperationTypeSummary, UnitSummary, WorkstationSummary
@@ -36,6 +37,9 @@ class ItemUpdate(BaseModel):
     output_quantity: int | None = Field(default=None, ge=1)
     inputs: list[ItemInputCreate] | None = None
 class ItemResponse(ItemBase):
+    group_uuid: UUID
+    is_main: bool
+    variants: list[ItemResponse] = Field(default_factory=list)
     id: int
     unit: UnitSummary
     operation_type: OperationTypeSummary | None

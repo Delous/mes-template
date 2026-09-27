@@ -26,10 +26,11 @@ async def get_items(
     size: Annotated[int, Query(ge=1, le=100)] = 20,
     include_deleted: bool = False,
     is_product: bool | None = None,
+    grouped: bool = True,
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_items(session, page, size, include_deleted, is_product)
+    return await service.list_items(session, page, size, include_deleted, is_product, grouped)
 
 
 @router.get("/{id}", response_model=ItemResponse)
@@ -67,3 +68,18 @@ async def delete_item(
     user: UserPublic = Depends(get_current_user),
 ):
     await service.delete_item(session, id)
+
+
+@router.post("/{id}/copy", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
+async def copy_item(id: Annotated[int, Path(gt=0)], session: AsyncSession = Depends(get_session), user: UserPublic = Depends(get_current_user)):
+    return await service.duplicate_item(session, id, variant=False)
+
+
+@router.post("/{id}/variants", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_variant(id: Annotated[int, Path(gt=0)], session: AsyncSession = Depends(get_session), user: UserPublic = Depends(get_current_user)):
+    return await service.duplicate_item(session, id, variant=True)
+
+
+@router.post("/{id}/make-main", response_model=ItemResponse)
+async def make_main(id: Annotated[int, Path(gt=0)], session: AsyncSession = Depends(get_session), user: UserPublic = Depends(get_current_user)):
+    return await service.make_main(session, id)

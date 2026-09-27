@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 if TYPE_CHECKING:
     from app.db.models.order import OrderLine
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
     from app.db.models.unit import Unit
     from app.db.models.workstation import Workstation
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Text, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -19,6 +20,8 @@ from app.db.mixins import SoftDeleteMixin, TimestampMixin
 class Item(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "items"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    group_uuid: Mapped[UUID] = mapped_column(Uuid, nullable=False, default=uuid4)
+    is_main: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     is_product: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     unit_id: Mapped[int] = mapped_column(
@@ -53,6 +56,8 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
     )
 
     __table_args__ = (
+        Index("ix_items_group_uuid", "group_uuid"),
+        Index("uq_items_group_main", "group_uuid", unique=True, postgresql_where=text("is_main AND deleted_at IS NULL")),
         Index("ix_items_name", "name"),
         Index("ix_items_operation_type_id", "operation_type_id"),
         Index("ix_items_workstation_id", "workstation_id"),
