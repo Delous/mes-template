@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def active_filter(model: type[Any], include_deleted: bool):
-    if include_deleted:
+    if include_deleted or not hasattr(model, "deleted_at"):
         return true()
     return model.deleted_at.is_(None)
 
@@ -18,7 +18,9 @@ async def get_active_or_none(
     obj_id: int,
     options: list[Any] | None = None,
 ):
-    stmt = select(model).where(model.id == obj_id, model.deleted_at.is_(None))
+    stmt = select(model).where(model.id == obj_id)
+    if hasattr(model, "deleted_at"):
+        stmt = stmt.where(model.deleted_at.is_(None))
     if options:
         stmt = stmt.options(*options)
 
