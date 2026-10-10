@@ -10,27 +10,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.sensor import Sensor
 from app.db.models.sensor_value import SensorValue
+from app.db.models.range_sensor_value import RangeSensorValue
 
 
 @dataclass(frozen=True)
 class ParsedLine:
     code: str
-    ch_values: tuple[int | None, int | None, int | None]  # (ch1, ch2, ch3)
+    voltage_values: tuple[int | None, int | None, int | None]  # (ch1, ch2, ch3)
+    range_values: str | None
 
 
 def parse_sensor_line(line: str) -> ParsedLine:
-    parts = line.split()
-    if len(parts) != 4:
-        raise ValueError("Expected: '<code> <ch1> <ch2> <ch3>'")
+    channels = line.split('/')
+    if len(channels) != 2:
+        raise ValueError("Expected: '<code> <ch1> <ch2> <ch3>/<1-20 vals>'")
+    voltage_channels, range_channel = channels
 
-    code_s, v1_s, v2_s, v3_s = parts
+    parts = voltage_channels.split()
+    if len(parts) != 4:
+        raise ValueError("Expected: '<code> <ch1> <ch2> <ch3>/<1-20 vals>'")
+    sensor_code, sensor_value_1, sensor_value_2, sensor_value_3 = parts
 
     def int_to_ipv4(n: int) -> str:
         if not (0 <= n <= 4294967295):
             raise ValueError("ipv4 int out of range")
         return ".".join(map(str, n.to_bytes(4, "little")))
 
-    def parse_val(v: str) -> int | None:
+    def parse_voltage_channel(v: str) -> int | None:
         if v.lower() == "null":
             return None
         try:
@@ -38,19 +44,19 @@ def parse_sensor_line(line: str) -> ParsedLine:
         except ValueError as e:
             raise ValueError(f"value must be int or NULL, got {v!r}") from e
 
-
-    def parse_value_with_added_value(v: str) -> int | None:
-        v, _ = v.split('/')
+    def parse_range_channel(v: str) -> int | None:
         if v.lower() == "null":
             return None
-        try:
-            return int(v)
-        except ValueError as e:
-            raise ValueError(f"value must be int or NULL, got {v!r}") from e
+        return v
 
     return ParsedLine(
-        code=int_to_ipv4(int(code_s)),
-        ch_values=(parse_val(v1_s), parse_val(v2_s), parse_value_with_added_value(v3_s)),
+        code=int_to_ipv4(int(sensor_code)),
+        voltage_values=(
+            parse_voltage_channel(sensor_value_1),
+            parse_voltage_channel(sensor_value_2),
+            parse_voltage_channel(sensor_value_3)
+        ),
+        range_values=(parse_range_channel(range_channel)),
     )
 
 
@@ -112,10 +118,14 @@ async def ingest_values_payload(
         for line in lines:
             pl = parse_sensor_line(line)
             ok_lines.append(pl)
-            for ch_idx, v in enumerate(pl.ch_values, start=1):
+            for ch_idx, v in enumerate(pl.voltage_values, start=1):
                 if v is not None:
                     needed_sensors.add((pl.code, ch_idx))
                     parsed_values += 1
+
+            if pl.range_values is not None:
+                needed_sensors.add((pl.code, 4))
+                parsed_values += 1
 
         if ok_lines:
             parsed_by_ts[ts] = ok_lines
@@ -125,13 +135,21 @@ async def ingest_values_payload(
     sensors_map = await ensure_sensors(session, needed_sensors)
 
     rows: list[dict[str, Any]] = []
+    range_rows: list[dict[str, Any]] = []
     for ts, plines in parsed_by_ts.items():
         for pl in plines:
-            for ch_idx, v in enumerate(pl.ch_values, start=1):
+            for ch_idx, v in enumerate(pl.voltage_values, start=1):
                 if v is None:
                     continue
                 sensor_id = sensors_map[(pl.code, ch_idx)]
                 rows.append({"sensor_id": sensor_id, "ts": ts, "value": v})
+
+            if pl.range_values is not None:
+                range_rows.append({
+                    "sensor_id": sensors_map[(pl.code, 4)],
+                    "ts": ts,
+                    "value": pl.range_values,
+                })
 
     if rows:
         stmt = pg_insert(SensorValue).values(rows)
@@ -145,11 +163,19 @@ async def ingest_values_payload(
 
         await session.execute(stmt)
 
+    if range_rows:
+        stmt = pg_insert(RangeSensorValue).values(range_rows)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["sensor_id", "ts"],
+            set_={"value": stmt.excluded.value},
+        )
+        await session.execute(stmt)
+
     return {
         "accepted_timestamps": accepted_timestamps,
         "accepted_lines": accepted_lines,
         "parsed_values": parsed_values,
-        "to_insert": len(rows),
+        "to_insert": len(rows) + len(range_rows),
     }
 
 

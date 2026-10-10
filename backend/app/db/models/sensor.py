@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.db.models.sensor_value import SensorValue
+    from app.db.models.range_sensor_value import RangeSensorValue
 
 from datetime import datetime, timezone
 
@@ -28,6 +29,12 @@ class Sensor(Base, TimestampMixin):
     )
 
     values: Mapped[list["SensorValue"]] = relationship(
+        back_populates="sensor",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    range_values: Mapped[list["RangeSensorValue"]] = relationship(
         back_populates="sensor",
         cascade="all, delete-orphan",
         passive_deletes=True,
