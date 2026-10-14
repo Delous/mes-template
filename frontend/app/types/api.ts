@@ -90,7 +90,20 @@ export type OperationTypeSummary = {
   name: string;
 };
 
+export type RouteMaterial = {
+  input_item_id: number | null;
+  source_route_key: string | null;
+  quantity: string;
+};
+export type ItemRoute = {
+  key: string;
+  name: string;
+  output_quantity: string;
+  steps: { operation_type_id: number; workstation_id: number; materials: RouteMaterial[] }[];
+};
+
 export type ItemDto = BaseCatalogDto & {
+  routes: ItemRoute[];
   group_uuid: string;
   is_main: boolean;
   variants: ItemDto[];
@@ -98,23 +111,14 @@ export type ItemDto = BaseCatalogDto & {
   unit: UnitSummary;
   description: string | null;
   is_product: boolean;
-  operation_type_id: number | null;
-  workstation_id: number | null;
-  output_quantity: number | null;
-  operation_type: OperationTypeSummary | null;
-  workstation: WorkstationSummary | null;
-  inputs: ItemInputDto[];
 };
 
 export type ItemPayload = {
+  routes?: ItemRoute[];
   name: string;
   unit_id: number;
   description?: string | null;
   is_product?: boolean;
-  operation_type_id?: number | null;
-  workstation_id?: number | null;
-  output_quantity?: number | null;
-  inputs?: ItemInputPayload[];
 };
 
 export type ItemUpdatePayload = Partial<ItemPayload>;
@@ -135,15 +139,6 @@ export type OperationTypePayload = {
 };
 
 export type OperationTypeUpdatePayload = Partial<OperationTypePayload>;
-
-export type ItemInputPayload = {
-  input_item_id: number;
-  quantity: string;
-};
-export type ItemInputDto = ItemInputPayload & {
-  id: number;
-  input_item: ItemSummary;
-};
 
 export type CatalogResource = 'units' | 'items' | 'workstations' | 'operation-types';
 

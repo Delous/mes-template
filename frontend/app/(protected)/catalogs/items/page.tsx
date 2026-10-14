@@ -7,7 +7,6 @@ import {
   Checkbox,
   Dialog,
   Flex,
-  Grid,
   Select,
   Text,
   TextArea,
@@ -35,6 +34,7 @@ import {
 import type {
   CycleConflictDetail,
   ItemDto,
+  ItemRoute,
   ItemPayload,
   OperationTypeDto,
   UnitDto,
@@ -42,16 +42,12 @@ import type {
 } from '@/types/api';
 
 const pageSize = 20;
-type DraftInput = { key: number; input_item_id: number; quantity: string };
 type ItemDraft = {
   name: string;
   unit_id: number;
   description: string;
   is_product: boolean;
-  operation_type_id: number | null;
-  workstation_id: number | null;
-  output_quantity: string;
-  inputs: DraftInput[];
+  routes: ItemRoute[];
 };
 type TreeNode = {
   item: ItemDto;
@@ -77,7 +73,7 @@ export default function ItemsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cycleId, setCycleId] = useState<number | null>(null);
+  const [, setCycleId] = useState<number | null>(null);
   const inputCandidates = useMemo(
     () => allItems.filter((item) => item.id !== editorItem?.id),
     [allItems, editorItem?.id],
@@ -139,12 +135,16 @@ export default function ItemsPage() {
       unit_id: draft.unit_id,
       description: draft.description.trim() || null,
       is_product: draft.is_product,
-      operation_type_id: draft.operation_type_id,
-      workstation_id: draft.workstation_id,
-      output_quantity: draft.output_quantity ? Number(draft.output_quantity) : null,
-      inputs: draft.inputs.map((input) => ({
-        input_item_id: input.input_item_id,
-        quantity: toDecimal(input.quantity),
+      routes: draft.routes.map((route) => ({
+        ...route,
+        output_quantity: toDecimal(String(route.output_quantity)),
+        steps: route.steps.map((step) => ({
+          ...step,
+          materials: step.materials.map((material) => ({
+            ...material,
+            quantity: toDecimal(String(material.quantity)),
+          })),
+        })),
       })),
     };
     try {
@@ -325,34 +325,6 @@ export default function ItemsPage() {
                   />
                 </div>
 
-                <div className="item-editor-production-row">
-                  <NullableSelect
-                    label="Тип операции"
-                    value={draft.operation_type_id}
-                    options={operationTypes}
-                    onChange={(value) => setDraft({ ...draft, operation_type_id: value })}
-                  />
-                  <NullableSelect
-                    label="Рабочий пост"
-                    value={draft.workstation_id}
-                    options={workstations}
-                    onChange={(value) => setDraft({ ...draft, workstation_id: value })}
-                  />
-                  <label className="form-field">
-                    <Text size="2">Количество</Text>
-                    <TextField.Root
-                      mt="2"
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={draft.output_quantity}
-                      onChange={(event) =>
-                        setDraft({ ...draft, output_quantity: event.target.value })
-                      }
-                    />
-                  </label>
-                </div>
-
                 <label className="item-editor-description">
                   <Text size="2">Описание</Text>
                   <TextArea
@@ -420,81 +392,13 @@ export default function ItemsPage() {
                     Сделать главной номенклатурой
                   </Button>
                 ))}
-              <Box className="surface" p="4">
-                <Text size="2" weight="medium">
-                  Материалы
-                </Text>
-                <Flex direction="column" gap="2" mt="3">
-                  {draft.inputs.map((input) => (
-                    <Grid
-                      key={input.key}
-                      columns={{ initial: '1', md: '1fr 160px 110px' }}
-                      gap="2"
-                      align="end"
-                      className={`material-row${cycleId === input.input_item_id ? ' conflict-row' : ''}`}
-                    >
-                      <SelectField
-                        label="Номенклатура"
-                        value={String(input.input_item_id)}
-                        options={inputCandidates}
-                        onChange={(value) =>
-                          setDraft({
-                            ...draft,
-                            inputs: draft.inputs.map((current) =>
-                              current.key === input.key
-                                ? { ...current, input_item_id: Number(value) }
-                                : current,
-                            ),
-                          })
-                        }
-                      />
-                      <Field
-                        label="Количество"
-                        value={input.quantity}
-                        onChange={(quantity) =>
-                          setDraft({
-                            ...draft,
-                            inputs: draft.inputs.map((current) =>
-                              current.key === input.key ? { ...current, quantity } : current,
-                            ),
-                          })
-                        }
-                      />
-                      <Button
-                        color="red"
-                        variant="soft"
-                        disabled={submitting}
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            inputs: draft.inputs.filter((current) => current.key !== input.key),
-                          })
-                        }
-                      >
-                        <Trash2 size={15} />
-                        Удалить
-                      </Button>
-                    </Grid>
-                  ))}
-                </Flex>
-                <Button
-                  mt="3"
-                  variant="soft"
-                  disabled={!inputCandidates.length}
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      inputs: [
-                        ...draft.inputs,
-                        { key: Date.now(), input_item_id: inputCandidates[0].id, quantity: '1' },
-                      ],
-                    })
-                  }
-                >
-                  <Plus size={15} />
-                  Добавить материал
-                </Button>
-              </Box>
+              <RoutesEditor
+                routes={draft.routes}
+                onChange={(routes) => setDraft({ ...draft, routes })}
+                items={inputCandidates}
+                operations={operationTypes}
+                posts={workstations}
+              />
               {treeVisible && tree && (
                 <Box className="surface specification-tree" p="4">
                   <Flex align="center" gap="2" mb="3">
@@ -523,10 +427,7 @@ function emptyDraft(unit_id: number): ItemDraft {
     unit_id,
     description: '',
     is_product: false,
-    operation_type_id: null,
-    workstation_id: null,
-    output_quantity: '',
-    inputs: [],
+    routes: [],
   };
 }
 
@@ -536,14 +437,7 @@ function fromItem(item: ItemDto): ItemDraft {
     unit_id: item.unit_id,
     description: item.description ?? '',
     is_product: item.is_product,
-    operation_type_id: item.operation_type_id,
-    workstation_id: item.workstation_id,
-    output_quantity: item.output_quantity?.toString() ?? '',
-    inputs: item.inputs.map((x) => ({
-      key: x.id,
-      input_item_id: x.input_item_id,
-      quantity: x.quantity,
-    })),
+    routes: structuredClone(item.routes),
   };
 }
 
@@ -551,8 +445,21 @@ function canSave(d: ItemDraft) {
   return Boolean(
     d.name.trim() &&
     d.unit_id &&
-    d.inputs.every((x) => x.input_item_id && Number(x.quantity) > 0) &&
-    (!d.output_quantity || Number(d.output_quantity) >= 1),
+    d.routes.every(
+      (r) =>
+        r.name.trim() &&
+        Number(r.output_quantity) > 0 &&
+        r.steps.length &&
+        r.steps[0].materials.length &&
+        r.steps.every(
+          (step) =>
+            step.operation_type_id &&
+            step.workstation_id &&
+            step.materials.every(
+              (m) => (m.input_item_id || m.source_route_key) && Number(m.quantity) > 0,
+            ),
+        ),
+    ),
   );
 }
 
@@ -601,37 +508,6 @@ function SelectField({
   );
 }
 
-function NullableSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  options: { id: number; name: string }[];
-  onChange: (v: number | null) => void;
-}) {
-  return (
-    <label className="form-field">
-      <Text size="2">{label}</Text>
-      <Select.Root
-        value={value ? String(value) : 'none'}
-        onValueChange={(v) => onChange(v === 'none' ? null : Number(v))}
-      >
-        <Select.Trigger className="catalog-select-trigger" mt="2" />
-        <Select.Content position="popper">
-          <Select.Item value="none">Не указано</Select.Item>
-          {options.map((x) => (
-            <Select.Item key={x.id} value={String(x.id)}>
-              {x.name}
-            </Select.Item>
-          ))}
-        </Select.Content>
-      </Select.Root>
-    </label>
-  );
-}
 async function buildTree(
   item: ItemDto,
   visited = new Set<number>(),
@@ -640,9 +516,20 @@ async function buildTree(
   if (visited.has(item.id)) return { item, quantity, repeated: true, children: [] };
   const next = new Set(visited);
   next.add(item.id);
+  const materials = item.routes
+    .flatMap((route) => route.steps.flatMap((step) => step.materials))
+    .filter((m) => m.input_item_id !== null);
+  const totals = new Map<number, number>();
+  for (const material of materials) {
+    if (material.input_item_id)
+      totals.set(
+        material.input_item_id,
+        (totals.get(material.input_item_id) ?? 0) + Number(material.quantity),
+      );
+  }
   const children = await Promise.all(
-    item.inputs.map(async (input) =>
-      buildTree(await getCatalogItem('items', input.input_item_id), next, input.quantity),
+    [...totals].map(async ([id, amount]) =>
+      buildTree(await getCatalogItem('items', id), next, String(amount)),
     ),
   );
   return { item, quantity, repeated: false, children };
@@ -656,8 +543,6 @@ function Tree({
   onOpen: (id: number) => void;
   root?: boolean;
 }) {
-  const details = [node.item.operation_type?.name, node.item.workstation?.name].filter(Boolean);
-
   return (
     <div className={`spec-tree-branch${root ? ' spec-tree-root' : ''}`}>
       <button type="button" className="spec-tree-row" onClick={() => onOpen(node.item.id)}>
@@ -675,20 +560,13 @@ function Tree({
               </Text>
             )}
           </span>
-          <Text as="span" size="1" color="gray" className="spec-tree-meta">
-            {details.length ? details.join(' · ') : 'Операция и рабочий пост не указаны'}
-          </Text>
         </span>
         <span className="spec-tree-quantity">
           <Text size="1" color="gray">
-            {root ? 'Выпуск' : 'Количество'}
+            {root ? 'Единица' : 'Количество'}
           </Text>
           <Text size="2" weight="medium">
-            {root
-              ? node.item.output_quantity
-                ? `${node.item.output_quantity} ${node.item.unit.symbol}`
-                : '—'
-              : `${node.quantity} ${node.item.unit.symbol}`}
+            {root ? node.item.unit.symbol : `${node.quantity} ${node.item.unit.symbol}`}
           </Text>
         </span>
         <ChevronRight className="spec-tree-open-icon" size={16} aria-hidden="true" />
@@ -701,5 +579,251 @@ function Tree({
         </div>
       )}
     </div>
+  );
+}
+
+function RoutesEditor({
+  routes,
+  onChange,
+  items,
+  operations,
+  posts,
+}: {
+  routes: ItemRoute[];
+  onChange: (routes: ItemRoute[]) => void;
+  items: ItemDto[];
+  operations: OperationTypeDto[];
+  posts: WorkstationDto[];
+}) {
+  function edit(index: number, action: (route: ItemRoute) => void) {
+    const next = structuredClone(routes);
+    action(next[index]);
+    onChange(next);
+  }
+  const newStep = () => ({
+    operation_type_id: operations[0]?.id ?? 0,
+    workstation_id: posts[0]?.id ?? 0,
+    materials: [],
+  });
+  return (
+    <Box className="surface" p="4">
+      <Text weight="medium">Маршруты</Text>
+      <Text as="p" size="2" color="gray" mt="2">
+        Результат каждого шага целиком передаётся следующему. Первый шаг должен содержать материалы.
+        Ссылка на результат маршрута означает ожидание его завершения перед началом этого маршрута.
+      </Text>
+      {routes.map((route, ri) => (
+        <Box key={route.key} className="surface" p="3" mt="3">
+          <Flex gap="3" align="end" wrap="wrap">
+            <Field
+              label="Название маршрута"
+              value={route.name}
+              onChange={(name) =>
+                edit(ri, (r) => {
+                  r.name = name;
+                })
+              }
+            />
+            <Field
+              label="Количество результата"
+              value={String(route.output_quantity)}
+              onChange={(quantity) =>
+                edit(ri, (r) => {
+                  r.output_quantity = quantity;
+                })
+              }
+            />
+            <Button
+              color="red"
+              variant="soft"
+              onClick={() => onChange(routes.filter((_, i) => i !== ri))}
+            >
+              Удалить маршрут
+            </Button>
+          </Flex>
+          {route.steps.map((step, si) => (
+            <Box key={si} p="3" mt="3" className="surface">
+              <Flex justify="between" align="center" mb="3">
+                <Text weight="medium">Шаг {si + 1}</Text>
+                <Flex gap="2">
+                  <Button
+                    variant="soft"
+                    disabled={!si}
+                    onClick={() =>
+                      edit(ri, (r) => {
+                        [r.steps[si - 1], r.steps[si]] = [r.steps[si], r.steps[si - 1]];
+                      })
+                    }
+                  >
+                    Выше
+                  </Button>
+                  <Button
+                    variant="soft"
+                    disabled={si === route.steps.length - 1}
+                    onClick={() =>
+                      edit(ri, (r) => {
+                        [r.steps[si + 1], r.steps[si]] = [r.steps[si], r.steps[si + 1]];
+                      })
+                    }
+                  >
+                    Ниже
+                  </Button>
+                  <Button
+                    color="red"
+                    variant="soft"
+                    onClick={() =>
+                      edit(ri, (r) => {
+                        r.steps.splice(si, 1);
+                      })
+                    }
+                  >
+                    Удалить шаг
+                  </Button>
+                </Flex>
+              </Flex>
+              <Flex gap="3" wrap="wrap">
+                <SelectField
+                  label="Операция"
+                  value={step.operation_type_id ? String(step.operation_type_id) : ''}
+                  options={operations}
+                  onChange={(value) =>
+                    edit(ri, (r) => {
+                      r.steps[si].operation_type_id = Number(value);
+                    })
+                  }
+                />
+                <SelectField
+                  label="Рабочий пост"
+                  value={step.workstation_id ? String(step.workstation_id) : ''}
+                  options={posts}
+                  onChange={(value) =>
+                    edit(ri, (r) => {
+                      r.steps[si].workstation_id = Number(value);
+                    })
+                  }
+                />
+              </Flex>
+              <Text as="p" size="2" mt="3">
+                Материалы{si === 0 ? ' (обязательны)' : ' + результат предыдущего шага'}
+              </Text>
+              {step.materials.map((material, mi) => (
+                <Flex key={mi} gap="3" align="end" wrap="wrap" mt="2">
+                  <label className="form-field">
+                    <Text size="2">Источник материала</Text>
+                    <Select.Root
+                      value={
+                        material.source_route_key
+                          ? `route:${material.source_route_key}`
+                          : material.input_item_id
+                            ? `item:${material.input_item_id}`
+                            : ''
+                      }
+                      onValueChange={(value) =>
+                        edit(ri, (r) => {
+                          r.steps[si].materials[mi] = {
+                            ...material,
+                            input_item_id: value.startsWith('item:')
+                              ? Number(value.slice(5))
+                              : null,
+                            source_route_key: value.startsWith('route:') ? value.slice(6) : null,
+                          };
+                        })
+                      }
+                    >
+                      <Select.Trigger mt="2" placeholder="Выберите источник" />
+                      <Select.Content>
+                        <Select.Group>
+                          <Select.Label>Номенклатура</Select.Label>
+                          {items.map((item) => (
+                            <Select.Item key={item.id} value={`item:${item.id}`}>
+                              {item.name}
+                            </Select.Item>
+                          ))}
+                        </Select.Group>
+                        <Select.Group>
+                          <Select.Label>Результат маршрута</Select.Label>
+                          {routes
+                            .filter((r) => r.key !== route.key)
+                            .map((r) => (
+                              <Select.Item key={r.key} value={`route:${r.key}`}>
+                                {r.name || 'Без названия'}
+                              </Select.Item>
+                            ))}
+                        </Select.Group>
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
+                  <Field
+                    label="Количество"
+                    value={String(material.quantity)}
+                    onChange={(quantity) =>
+                      edit(ri, (r) => {
+                        r.steps[si].materials[mi].quantity = quantity;
+                      })
+                    }
+                  />
+                  <Button
+                    color="red"
+                    variant="soft"
+                    onClick={() =>
+                      edit(ri, (r) => {
+                        r.steps[si].materials.splice(mi, 1);
+                      })
+                    }
+                  >
+                    <Trash2 size={15} />
+                    Удалить
+                  </Button>
+                </Flex>
+              ))}
+              <Button
+                mt="3"
+                variant="soft"
+                onClick={() =>
+                  edit(ri, (r) => {
+                    r.steps[si].materials.push({
+                      input_item_id: items[0]?.id ?? null,
+                      source_route_key: null,
+                      quantity: '1',
+                    });
+                  })
+                }
+              >
+                Добавить материал
+              </Button>
+            </Box>
+          ))}
+          <Button
+            mt="3"
+            variant="soft"
+            onClick={() =>
+              edit(ri, (r) => {
+                r.steps.push(newStep());
+              })
+            }
+          >
+            Добавить шаг
+          </Button>
+        </Box>
+      ))}
+      <Button
+        mt="3"
+        variant="soft"
+        onClick={() =>
+          onChange([
+            ...routes,
+            {
+              key: crypto.randomUUID(),
+              name: `Маршрут ${routes.length + 1}`,
+              output_quantity: '1',
+              steps: [newStep()],
+            },
+          ])
+        }
+      >
+        <Plus size={15} />
+        Добавить маршрут
+      </Button>
+    </Box>
   );
 }

@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.db.models.item import Item
     from app.db.models.task import Task
     from app.db.models.user_workstation import UserWorkstation
 
@@ -21,8 +20,6 @@ class Workstation(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-
-    items: Mapped[list["Item"]] = relationship(back_populates="workstation")
 
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="workstation",
