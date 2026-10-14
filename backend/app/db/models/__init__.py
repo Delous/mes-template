@@ -1,5 +1,6 @@
 from app.db.models.sensor import Sensor
 from app.db.models.sensor_value import SensorValue
+from app.db.models.range_sensor_value import RangeSensorValue
 
 from app.db.models.user import User
 from app.db.models.unit import Unit
@@ -14,8 +15,9 @@ from app.db.models.task_history import TaskHistory
 
 
 __all__ = [
-    "SensorValue",
     "Sensor",
+    "SensorValue",
+    "RangeSensorValue",
     "User",
     "Unit",
     "Item",
