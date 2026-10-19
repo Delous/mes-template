@@ -68,7 +68,7 @@ def validate_update_task_status(
     new_status: str,
 ) -> None:
     if new_status == "rejected":
-        if user.role != "reviewer" or task.task_type != "quality_review":
+        if user.role not in {"reviewer", "admin"} or task.task_type != "quality_review":
             raise HTTPException(status_code=403, detail="Task rejection is forbidden")
         if task.status not in {"to_do", "in_progress"}:
             raise HTTPException(status_code=403, detail="Task rejection is forbidden")
@@ -115,16 +115,16 @@ def validate_task_update_payload(
             detail="Defect quantity is required when rejecting quality review",
         )
 
-    if user.role != "operator" and payload.actual_quantity_delta is not None:
+    if user.role not in {"operator", "admin"} and payload.actual_quantity_delta is not None:
         raise HTTPException(
             status_code=403,
-            detail="Only operators can set actual quantity",
+            detail="Only operators and admins can set actual quantity",
         )
 
-    if user.role != "reviewer" and payload.defect_quantity_delta is not None:
+    if user.role not in {"reviewer", "admin"} and payload.defect_quantity_delta is not None:
         raise HTTPException(
             status_code=403,
-            detail="Only reviewers can set defect quantity",
+            detail="Only reviewers and admins can set defect quantity",
         )
 
     if payload.defect_quantity_delta is not None and task.task_type != "quality_review":
@@ -133,14 +133,14 @@ def validate_task_update_payload(
             detail="Defect quantity can be changed only for quality review tasks",
         )
 
-    if user.role != "reviewer" and payload.comment is not None:
+    if user.role not in {"reviewer", "admin"} and payload.comment is not None:
         raise HTTPException(
             status_code=403,
-            detail="Only reviewers can set review comment",
+            detail="Only reviewers and admins can set review comment",
         )
 
     if (
-        user.role == "operator"
+        user.role in {"operator", "admin"}
         and task.task_type == "operation"
         and payload.status == "done"
         and payload.actual_quantity_delta is None

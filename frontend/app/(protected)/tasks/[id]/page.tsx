@@ -138,22 +138,41 @@ function TaskActions({
   submitting: boolean;
   onTransition: (status: TaskUpdateStatus, event?: FormEvent<HTMLFormElement>) => void;
 }) {
-  const canStart = task.status === 'to_do' && ['operator', 'reviewer'].includes(role ?? '');
+  const canStart =
+    task.status === 'to_do' && ['admin', 'operator', 'reviewer'].includes(role ?? '');
   const canResume = task.status === 'blocked' && ['admin', 'operator'].includes(role ?? '');
   const canBlock = task.status === 'in_progress' && ['admin', 'operator'].includes(role ?? '');
   const canCompleteOperation =
-    task.status === 'in_progress' && task.task_type === 'operation' && role === 'operator';
+    ['to_do', 'in_progress'].includes(task.status) &&
+    task.task_type === 'operation' &&
+    (role === 'operator' || role === 'admin');
   const canCompleteSimple =
-    task.status === 'in_progress' &&
+    ['to_do', 'in_progress'].includes(task.status) &&
     task.task_type !== 'operation' &&
     (role === 'operator' || role === 'reviewer' || role === 'admin');
   const canReject =
     ['to_do', 'in_progress'].includes(task.status) &&
     task.task_type === 'quality_review' &&
-    role === 'reviewer';
+    (role === 'reviewer' || role === 'admin');
 
   return (
     <Flex gap="2" wrap="wrap" align="center">
+      {role === 'admin' && task.status === 'waiting' ? (
+        <Button size="2" disabled={submitting} onClick={() => onTransition('to_do')}>
+          <Play size={15} /> Разрешить выполнение
+        </Button>
+      ) : null}
+      {role === 'admin' && ['waiting', 'to_do', 'blocked'].includes(task.status) ? (
+        <Button
+          size="2"
+          color="red"
+          variant="soft"
+          disabled={submitting}
+          onClick={() => onTransition('cancelled')}
+        >
+          <XCircle size={15} /> Отменить
+        </Button>
+      ) : null}
       {canStart ? (
         <Button size="2" disabled={submitting} onClick={() => onTransition('in_progress')}>
           <Play size={15} /> Взять в работу

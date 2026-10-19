@@ -46,10 +46,10 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
     },
     "to_do": {
         "in_progress": {
-            "roles": {"operator", "reviewer"},
+            "roles": {"operator", "reviewer", "admin"},
         },
         "done": {
-            "roles": {"operator", "reviewer"},
+            "roles": {"operator", "reviewer", "admin"},
         },
         "cancelled": {
             "roles": {"admin"},
@@ -60,7 +60,7 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
             "roles": {"operator", "admin"},
         },
         "done": {
-            "roles": {"operator", "reviewer"},
+            "roles": {"operator", "reviewer", "admin"},
         },
     },
     "blocked": {
