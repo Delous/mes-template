@@ -27,8 +27,7 @@ def order_detail_options():
         selectinload(Order.lines),
         selectinload(Order.tasks).selectinload(Task.item),
         selectinload(Order.tasks).selectinload(Task.workstation),
-        selectinload(Order.tasks).selectinload(Task.source_workstation),
-        selectinload(Order.tasks).selectinload(Task.target_workstation),
+        selectinload(Order.tasks).selectinload(Task.dependencies).selectinload(TaskDependency.depends_on_task).selectinload(Task.item),
     ]
 
 
@@ -74,7 +73,7 @@ async def create_tasks_for_item(
     item_id: int,
     required_quantity: Decimal,
     stack: set[int],
-) -> tuple[Task | None, int | None]:
+) -> list[Task]:
     if item_id in stack:
         raise HTTPException(status_code=409, detail="Cyclic item composition dependency detected")
 
@@ -84,7 +83,7 @@ async def create_tasks_for_item(
         result = await create_tasks_for_routes(session, order, line, item, required_quantity, stack)
         stack.remove(item_id)
         return result
-    return None, None
+    return []
 
 
 async def create_tasks_for_routes(session, order, line, item, required_quantity, stack):
@@ -111,22 +110,15 @@ async def create_tasks_for_routes(session, order, line, item, required_quantity,
         demand(key, required_quantity)
     if not sinks:
         raise HTTPException(409, "Циклическая зависимость маршрутов")
-    completed = {}
+    completed: dict[str, tuple[Task, int]] = {}
 
-    async def new_task(kind, description, quantity, item_id, workstation, source=None, target=None):
-        task = Task(task_type=kind, status="waiting", description=description,
+    async def new_task(kind, description, quantity, item_id, workstation, status="waiting"):
+        task = Task(task_type=kind, status=status, description=description,
                     planned_quantity=quantity, actual_quantity=Decimal("0"), defect_quantity=Decimal("0"),
                     order_id=order.id, order_line_id=line.id, item_id=item_id,
-                    workstation_id=workstation, source_workstation_id=source, target_workstation_id=target)
+                    workstation_id=workstation)
         session.add(task)
         await session.flush()
-        return task
-
-    async def delivered(task, source, target, quantity, material_id, name):
-        if task is not None and source != target:
-            transfer = await new_task("transfer" if source is not None else "warehouse_delivery", f"Доставить {name}", quantity, material_id, target, source, target)
-            await add_dependency(session, transfer, task)
-            return transfer
         return task
 
     async def build(key):
@@ -135,80 +127,41 @@ async def create_tasks_for_routes(session, order, line, item, required_quantity,
         route = routes[key]
         quantity = quantities[key].quantize(Decimal("0.01"), rounding="ROUND_CEILING")
         multiplier = quantity / Decimal(str(route["output_quantity"]))
-        # Every external route dependency gates the beginning of this route.
-        prerequisites = []
-        for step in route["steps"]:
-            for material in step["materials"]:
-                if material.get("source_route_key"):
-                    upstream, _ = await build(material["source_route_key"])
-                    prerequisites.append(upstream)
-        previous, previous_post = None, None
+        route_prerequisites = []
+        for route_step in route["steps"]:
+            for material in route_step["materials"]:
+                source_key = material.get("source_route_key")
+                if source_key:
+                    prerequisite, _ = await build(source_key)
+                    route_prerequisites.append(prerequisite)
+        previous = None
+        previous_post = None
         for index, step in enumerate(route["steps"]):
             post = step["workstation_id"]
-            dependencies = list(prerequisites) if index == 0 else []
+            dependencies = list(route_prerequisites) if index == 0 else []
             if previous:
-                dependencies.append(await delivered(previous, previous_post, post, quantity, item.id, route["name"]))
+                dependencies.append(previous)
             for material in step["materials"]:
-                amount = (Decimal(str(material["quantity"])) * multiplier).quantize(Decimal("0.01"), rounding="ROUND_CEILING")
                 if material.get("source_route_key"):
-                    upstream, source = await build(material["source_route_key"])
-                    dependency = await delivered(upstream, source, post, amount, item.id, routes[material["source_route_key"]]["name"])
+                    await build(material["source_route_key"])
                 else:
-                    upstream, source = await create_tasks_for_item(session, order, line, material["input_item_id"], amount, stack)
-                    dependency = await delivered(upstream, source, post, amount, material["input_item_id"], "материалы")
-                    if dependency is None:
-                        dependency = await new_task("warehouse_delivery", "Доставить материалы", amount, material["input_item_id"], post, target=post)
-                dependencies.append(dependency)
+                    quantity_needed = (Decimal(str(material["quantity"])) * multiplier).quantize(Decimal("0.01"), rounding="ROUND_CEILING")
+                    dependencies.extend(await create_tasks_for_item(session, order, line, material["input_item_id"], quantity_needed, stack))
             operation = await session.get(OperationType, step["operation_type_id"])
             previous = await new_task("operation", f'{route["name"]}: шаг {index + 1} — {operation.name}', quantity, item.id, post)
             for dependency in {task.id: task for task in dependencies}.values():
                 await add_dependency(session, previous, dependency)
             previous_post = post
+        if previous is None:
+            raise HTTPException(status_code=409, detail="Route must contain at least one operation")
         completed[key] = previous, previous_post
-        return completed[key]
+        return previous, previous_post
 
-    deliveries = []
+    final_tasks = []
     for key in sinks:
-        task, post = await build(key)
-        delivery = await new_task("warehouse_delivery", f"Доставить готовое на склад: {item.name} ({routes[key]['name']})", required_quantity, item.id, post, source=post)
-        await add_dependency(session, delivery, task)
-        deliveries.append(delivery)
-    # One terminal dependency represents completion of all output routes.
-    if len(deliveries) == 1:
-        return deliveries[0], None
-    terminal = await new_task("warehouse_delivery", f"Комплектовать: {item.name}", required_quantity, item.id, None)
-    for delivery in deliveries:
-        await add_dependency(session, terminal, delivery)
-    return terminal, None
-
-
-async def create_finished_goods_delivery(
-    session: AsyncSession,
-    order: Order,
-    line: OrderLine,
-    item: Item,
-    operation_task: Task,
-    workstation_id: int | None,
-) -> None:
-    if workstation_id is None:
-        return
-
-    delivery_task = Task(
-        task_type="warehouse_delivery",
-        status="waiting",
-        description=f"Доставить готовое на склад: {item.name}",
-        planned_quantity=line.quantity,
-        actual_quantity=Decimal("0"),
-        defect_quantity=Decimal("0"),
-        order_id=order.id,
-        order_line_id=line.id,
-        item_id=item.id,
-        workstation_id=workstation_id,
-        source_workstation_id=workstation_id,
-    )
-    session.add(delivery_task)
-    await session.flush()
-    await add_dependency(session, delivery_task, operation_task)
+        task, _ = await build(key)
+        final_tasks.append(task)
+    return final_tasks
 
 
 async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Order:
@@ -231,7 +184,7 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
         )
         session.add(line)
         await session.flush()
-        operation_task, workstation_id = await create_tasks_for_item(
+        operation_tasks = await create_tasks_for_item(
             session,
             order,
             line,
@@ -239,23 +192,9 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
             line.quantity,
             set(),
         )
-        if operation_task is not None:
-            await create_finished_goods_delivery(
-                session,
-                order,
-                line,
-                item,
-                operation_task,
-                workstation_id,
-            )
-        elif not item.routes:
-            delivery_task = Task(
-                task_type="warehouse_delivery", status="waiting", description=f"Доставить со склада: {item.name}",
-                planned_quantity=line.quantity, actual_quantity=Decimal("0"), defect_quantity=Decimal("0"),
-                order_id=order.id, order_line_id=line.id, item_id=item.id,
-                workstation_id=None, target_workstation_id=None,
-            )
-            session.add(delivery_task)
+        for task in operation_tasks:
+            if task.status == "waiting" and not task.dependencies:
+                task.status = "to_do"
 
     await session.refresh(order, attribute_names=["lines"])
     await activate_ready_tasks(session)

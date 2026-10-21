@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-TaskType = Literal["warehouse_delivery", "operation", "quality_review", "transfer"]
+TaskType = Literal["operation", "quality_review"]
 TaskStatus = Literal["waiting", "to_do", "in_progress", "blocked", "done", "cancelled"]
 TaskUpdateStatus = Literal[
     "to_do",
@@ -51,6 +51,15 @@ class TaskItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TaskDependencyResponse(BaseModel):
+    id: int
+    description: str | None
+    status: TaskStatus
+    item: TaskItemResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskResponse(BaseModel):
     id: int
     task_type: TaskType
@@ -63,12 +72,9 @@ class TaskResponse(BaseModel):
     order_line_id: int
     item_id: int
     workstation_id: int | None
-    source_workstation_id: int | None
-    target_workstation_id: int | None
     item: TaskItemResponse
     workstation: TaskWorkstationResponse | None
-    source_workstation: TaskWorkstationResponse | None
-    target_workstation: TaskWorkstationResponse | None
+    dependencies: list[TaskDependencyResponse]
     executor_id: int | None
     created_at: datetime
     updated_at: datetime

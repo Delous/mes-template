@@ -8,7 +8,7 @@ from app.tasks.schema import UpdateTaskRequest
 from app.tasks.status_model import OPERATOR_TASK_TYPES, TASK_STATUS_FLOW
 
 
-VISIBLE_ACTIVE_STATUSES = {"to_do", "in_progress", "blocked"}
+VISIBLE_ACTIVE_STATUSES = {"waiting", "to_do", "in_progress", "blocked"}
 
 
 def visible_task_filter(user: UserPublic):
@@ -25,7 +25,7 @@ def visible_task_filter(user: UserPublic):
                     Task.executor_id == user.id,
                 ),
                 and_(
-                    Task.status.in_(["to_do", "blocked"]),
+                    Task.status.in_(["waiting", "to_do", "blocked"]),
                     Task.executor_id.is_(None),
                 ),
             ),
@@ -154,9 +154,9 @@ def validate_task_update_payload(
 def task_status_order_expression():
     return case(
         (Task.status == "in_progress", 1),
-        (Task.status == "to_do", 2),
-        (Task.status == "blocked", 3),
-        (Task.status == "waiting", 4),
+        (Task.status == "waiting", 2),
+        (Task.status == "to_do", 3),
+        (Task.status == "blocked", 4),
         (Task.status == "done", 5),
         (Task.status == "cancelled", 6),
         else_=100,

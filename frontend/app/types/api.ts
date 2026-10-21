@@ -192,7 +192,7 @@ export type OrderDetailDto = OrderDto & {
   tasks: TaskDto[];
 };
 
-export type TaskType = 'warehouse_delivery' | 'operation' | 'quality_review' | 'transfer';
+export type TaskType = 'operation' | 'quality_review';
 export type TaskStatus = 'waiting' | 'to_do' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
 export type TaskUpdateStatus = TaskStatus | 'rejected';
 
@@ -213,19 +213,23 @@ export type TaskDto = {
   order_line_id: number;
   item_id: number;
   workstation_id: number | null;
-  source_workstation_id: number | null;
-  target_workstation_id: number | null;
   item: {
     id: number;
     name: string;
     unit_id: number;
   };
   workstation: TaskWorkstationDto | null;
-  source_workstation: TaskWorkstationDto | null;
-  target_workstation: TaskWorkstationDto | null;
+  dependencies: TaskDependencyDto[];
   executor_id: number | null;
   created_at: string;
   updated_at: string;
+};
+
+export type TaskDependencyDto = {
+  id: number;
+  description: string | null;
+  status: TaskStatus;
+  item: { id: number; name: string; unit_id: number };
 };
 
 export type UpdateTaskPayload = {

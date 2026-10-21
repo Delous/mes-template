@@ -3,7 +3,7 @@ import { Badge } from '@radix-ui/themes';
 import type { TaskStatus, TaskType, TaskUpdateStatus } from '@/types/api';
 
 const statusLabels: Record<TaskUpdateStatus, string> = {
-  waiting: 'Ожидает',
+  waiting: 'Ожидает задачи',
   to_do: 'К выполнению',
   in_progress: 'В работе',
   blocked: 'Заблокирована',
@@ -13,14 +13,12 @@ const statusLabels: Record<TaskUpdateStatus, string> = {
 };
 
 const taskTypeLabels: Record<TaskType, string> = {
-  warehouse_delivery: 'Доставка',
   operation: 'Операция',
   quality_review: 'ОТК',
-  transfer: 'Перемещение',
 };
 
 const colors: Record<TaskUpdateStatus, React.ComponentProps<typeof Badge>['color']> = {
-  waiting: 'gray',
+  waiting: 'red',
   to_do: 'blue',
   in_progress: 'amber',
   blocked: 'red',
@@ -30,7 +28,7 @@ const colors: Record<TaskUpdateStatus, React.ComponentProps<typeof Badge>['color
 };
 
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {
-  return <Badge color={colors[status]}>{statusLabels[status]}</Badge>;
+  return <Badge color={colors[status]}>{status === 'waiting' ? 'Заблокирована' : statusLabels[status]}</Badge>;
 }
 
 export function TaskTypeBadge({ type }: { type: TaskType }) {

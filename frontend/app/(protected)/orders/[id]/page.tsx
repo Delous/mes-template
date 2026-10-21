@@ -137,6 +137,7 @@ export default function OrderPage() {
                   <th>Описание</th>
                   <th>Номенклатура</th>
                   <th>План</th>
+                  <th>Зависит от</th>
                   <th />
                 </tr>
               </thead>
@@ -153,6 +154,11 @@ export default function OrderPage() {
                     <td>{task.description || task.item.name}</td>
                     <td>{task.item.name}</td>
                     <td>{formatQuantity(task.planned_quantity)}</td>
+                    <td>
+                  {task.dependencies.map((dependency) => (
+                        <div key={dependency.id}>#{dependency.id} · {dependency.description || dependency.item.name}</div>
+                      ))}
+                    </td>
                     <td>
                       <Button asChild size="2" variant="soft" color="gray">
                         <Link href={`/tasks/${task.id}`}>

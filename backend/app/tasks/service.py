@@ -18,12 +18,25 @@ from app.tasks.access import (
 from app.tasks.schema import UpdateTaskRequest
 
 
+async def validate_dependencies_ready(session: AsyncSession, task: Task) -> None:
+    result = await session.execute(
+        select(TaskDependency.depends_on_task_id, Task.status)
+        .join(Task, Task.id == TaskDependency.depends_on_task_id)
+        .where(TaskDependency.task_id == task.id)
+    )
+    blocked_by = [task_id for task_id, status in result.all() if status != "done"]
+    if blocked_by:
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "Task is blocked by unfinished dependencies", "task_ids": blocked_by},
+        )
+
+
 def task_options():
     return [
         selectinload(Task.item),
         selectinload(Task.workstation),
-        selectinload(Task.source_workstation),
-        selectinload(Task.target_workstation),
+        selectinload(Task.dependencies).selectinload(TaskDependency.depends_on_task).selectinload(Task.item),
     ]
 
 
@@ -36,7 +49,7 @@ async def activate_ready_tasks(session: AsyncSession) -> None:
     waiting_tasks = result.scalars().all()
 
     for task in waiting_tasks:
-        if all(link.depends_on_task.status == "done" for link in task.dependencies):
+        if not any(link.depends_on_task.status != "done" for link in task.dependencies):
             task.status = "to_do"
 
 
@@ -143,6 +156,9 @@ async def update_task(
     validate_task_update_payload(user, task, payload)
     validate_update_task_status(user, task, payload.status)
 
+    if payload.status in {"in_progress", "done"}:
+        await validate_dependencies_ready(session, task)
+
     if payload.status == "rejected":
         return await reject_quality_review(session, task, payload, user)
 
@@ -173,7 +189,7 @@ async def update_task(
         )
     )
 
-    if task.status == "done":
+    if task.status in {"done", "cancelled"}:
         await activate_ready_tasks(session)
 
     await session.flush()

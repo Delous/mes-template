@@ -115,12 +115,20 @@ export default function TaskPage() {
             <Box className="surface" p="4">
               <Grid columns={{ initial: '1', sm: '2' }} gap="3">
                 <Detail label="Рабочий пост" value={task.workstation?.name ?? 'Не указан'} />
-                <Detail label="Откуда" value={task.source_workstation?.name ?? 'Не указано'} />
-                <Detail label="Куда" value={task.target_workstation?.name ?? 'Не указано'} />
                 <Detail label="Обновлено" value={formatDate(task.updated_at)} />
               </Grid>
             </Box>
           </Grid>
+          {task.dependencies.some((dependency) => dependency.status !== 'done') ? (
+            <Box className="surface" p="4" mt="4">
+              <Text as="div" weight="bold" color="red" mb="2">Заблокирована до завершения:</Text>
+              {task.dependencies.filter((dependency) => dependency.status !== 'done').map((dependency) => (
+                <Text key={dependency.id} as="div" size="2">
+                  #{dependency.id} · {dependency.description || dependency.item.name}
+                </Text>
+              ))}
+            </Box>
+          ) : null}
         </>
       ) : null}
     </div>
@@ -157,12 +165,7 @@ function TaskActions({
 
   return (
     <Flex gap="2" wrap="wrap" align="center">
-      {role === 'admin' && task.status === 'waiting' ? (
-        <Button size="2" disabled={submitting} onClick={() => onTransition('to_do')}>
-          <Play size={15} /> Разрешить выполнение
-        </Button>
-      ) : null}
-      {role === 'admin' && ['waiting', 'to_do', 'blocked'].includes(task.status) ? (
+      {role === 'admin' && ['to_do', 'blocked'].includes(task.status) ? (
         <Button
           size="2"
           color="red"

@@ -58,16 +58,6 @@ class Task(Base, TimestampMixin):
         nullable=True,
     )
 
-    source_workstation_id: Mapped[int | None] = mapped_column(
-        ForeignKey("workstations.id"),
-        nullable=True,
-    )
-
-    target_workstation_id: Mapped[int | None] = mapped_column(
-        ForeignKey("workstations.id"),
-        nullable=True,
-    )
-
     executor_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"),
         nullable=True,
@@ -88,14 +78,6 @@ class Task(Base, TimestampMixin):
     workstation: Mapped["Workstation"] = relationship(
         back_populates="tasks",
         foreign_keys=[workstation_id],
-    )
-
-    source_workstation: Mapped["Workstation | None"] = relationship(
-        foreign_keys=[source_workstation_id],
-    )
-
-    target_workstation: Mapped["Workstation | None"] = relationship(
-        foreign_keys=[target_workstation_id],
     )
 
     executor: Mapped["User | None"] = relationship(

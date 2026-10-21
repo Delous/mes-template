@@ -4,12 +4,7 @@ USER_ROLES = {
     "reviewer",
 }
 
-TASK_TYPES = {
-    "warehouse_delivery",
-    "operation",
-    "quality_review",
-    "transfer",
-}
+TASK_TYPES = {"operation", "quality_review"}
 
 TASK_STATUSES = {
     "waiting",
@@ -20,15 +15,7 @@ TASK_STATUSES = {
     "cancelled",
 }
 
-LOGISTICS_TASK_TYPES = {
-    "warehouse_delivery",
-    "transfer",
-}
-
-OPERATOR_TASK_TYPES = {
-    "operation",
-    *LOGISTICS_TASK_TYPES,
-}
+OPERATOR_TASK_TYPES = {"operation"}
 
 TransitionRuleType = dict[str, set[str]]
 StatusTransitionsType = dict[str, TransitionRuleType]
@@ -37,9 +24,6 @@ TaskStatusFlowType = dict[str, StatusTransitionsType]
 
 TASK_STATUS_FLOW: TaskStatusFlowType = {
     "waiting": {
-        "to_do": {
-            "roles": {"admin"},
-        },
         "cancelled": {
             "roles": {"admin"},
         },

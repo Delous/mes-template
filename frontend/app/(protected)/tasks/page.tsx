@@ -78,6 +78,17 @@ export default function TasksPage() {
                     <Detail label="Рабочий пост" value={task.workstation?.name ?? 'Не указан'} />
                   </Grid>
 
+                  {task.dependencies.some((dependency) => dependency.status !== 'done') ? (
+                    <Box>
+                      <Text as="div" size="2" weight="bold" color="red">Ожидает выполнения задач:</Text>
+                      {task.dependencies.filter((dependency) => dependency.status !== 'done').map((dependency) => (
+                        <Text key={dependency.id} as="div" size="2" color="gray">
+                          #{dependency.id} · {dependency.description || dependency.item.name}
+                        </Text>
+                      ))}
+                    </Box>
+                  ) : null}
+
                   <Button asChild variant="soft" color="gray">
                     <Link href={`/tasks/${task.id}`}>
                       <Eye size={15} /> Подробнее
