@@ -176,7 +176,7 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
     await session.flush()
 
     for line_payload in payload.lines:
-        item = await get_active_item(session, line_payload.item_id)
+        await get_active_item(session, line_payload.item_id)
         line = OrderLine(
             order_id=order.id,
             item_id=line_payload.item_id,
@@ -184,7 +184,7 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
         )
         session.add(line)
         await session.flush()
-        operation_tasks = await create_tasks_for_item(
+        await create_tasks_for_item(
             session,
             order,
             line,
@@ -192,11 +192,9 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
             line.quantity,
             set(),
         )
-        for task in operation_tasks:
-            if task.status == "waiting" and not task.dependencies:
-                task.status = "to_do"
-
-    await session.refresh(order, attribute_names=["lines"])
+    # Autoflush is disabled: persist every dependency before checking readiness.
+    # activate_ready_tasks eagerly loads dependencies, avoiding async lazy loads.
+    await session.flush()
     await activate_ready_tasks(session)
     await session.flush()
     return await get_order_by_id(session, order.id)

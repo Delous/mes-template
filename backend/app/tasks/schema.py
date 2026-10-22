@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 TaskType = Literal["operation", "quality_review"]
@@ -58,6 +58,12 @@ class TaskDependencyResponse(BaseModel):
     item: TaskItemResponse
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def from_dependency_link(cls, value: Any) -> Any:
+        # ORM dependencies are links; the API exposes the prerequisite task.
+        return getattr(value, "depends_on_task", value)
 
 
 class TaskResponse(BaseModel):
