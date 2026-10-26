@@ -226,6 +226,45 @@ select {
   gap: 7px;
 }
 
+.user-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.user-card-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.user-card-summary > * {
+  min-width: 0;
+}
+
+.user-card-name {
+  color: var(--gray-12);
+}
+
+.user-card-editor {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-5);
+}
+
+.user-card-editor summary {
+  width: fit-content;
+  color: var(--accent-11);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .user-card-summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 32px;
+  }
+}
+
 .item-editor-primary-row,
 .item-editor-production-row {
   display: grid;

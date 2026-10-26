@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Callout,
+  Card,
   Flex,
   Grid,
   Heading,
@@ -126,7 +127,7 @@ export default function UsersPage() {
         </Callout.Root>
       ) : null}
 
-      <Box className="surface" p="4" mb="4">
+      <Card size="3" mb="4">
         <form onSubmit={handleCreate}>
           <Grid columns={{ initial: '1', md: '4' }} gap="3" align="end">
             <label>
@@ -152,7 +153,7 @@ export default function UsersPage() {
             </Button>
           </Grid>
         </form>
-      </Box>
+      </Card>
 
       {loading ? (
         <Flex className="surface empty-state" align="center" justify="center" gap="3">
@@ -160,86 +161,74 @@ export default function UsersPage() {
           <Text color="gray">Загружаем пользователей</Text>
         </Flex>
       ) : (
-        <Box className="surface table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Логин</th>
-                <th>ФИО</th>
-                <th>Роль</th>
-                <th>Рабочие посты</th>
-                <th>Пароль</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.username}</td>
-                  <td>{user.full_name}</td>
-                  <td>
-                    <Badge color={user.role === 'admin' ? 'tomato' : 'gray'}>
-                      {roleLabels[user.role]}
-                    </Badge>
-                  </td>
-                  <td>
-                    <form id={`user-${user.id}`} onSubmit={(event) => handleUpdate(user.id, event)}>
+        <Flex direction="column" gap="3">
+          {users.map((user) => (
+            <Card key={user.id} size="3" className="user-card">
+              <div className="user-card-summary">
+                <Flex direction="column" align="start" gap="2">
+                  <Text as="p" size="4" weight="bold" className="user-card-name">
+                    {user.full_name}
+                  </Text>
+                  <Text as="p" size="2" color="gray">
+                    {user.username}
+                  </Text>
+                  <Badge color={user.role === 'admin' ? 'tomato' : 'gray'}>
+                    {roleLabels[user.role]}
+                  </Badge>
+                </Flex>
+                <Box>
+                  <Text as="p" size="2" color="gray" mb="2">
+                    Рабочие посты
+                  </Text>
+                  <Text as="p" size="3">
+                    {user.workstations.map((workstation) => workstation.name).join(', ') ||
+                      'Не назначены'}
+                  </Text>
+                </Box>
+              </div>
+
+              {user.role !== 'admin' ? (
+                <details className="user-card-editor">
+                  <summary>Редактировать</summary>
+                  <form onSubmit={(event) => handleUpdate(user.id, event)}>
+                    <Grid columns={{ initial: '1', sm: '2' }} gap="3" mt="3">
+                      <label>
+                        <Text size="2">Роль</Text>
+                        <select name="role" required defaultValue={user.role}>
+                          {editableRoles.map((role) => (
+                            <option key={role} value={role}>
+                              {roleLabels[role]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <Text size="2">Новый пароль</Text>
+                        <TextField.Root name="password" type="password" mt="2" minLength={6} />
+                      </label>
+                    </Grid>
+                    <Box mt="3" role="group" aria-label="Рабочие посты">
+                      <Text size="2">Рабочие посты</Text>
                       <WorkstationCheckboxes
                         name="workstation_ids"
                         workstations={workstations}
                         selectedIds={user.workstations.map((workstation) => workstation.id)}
-                        disabled={user.role === 'admin'}
                       />
-                    </form>
-                  </td>
-                  <td>
-                    <TextField.Root
-                      form={`user-${user.id}`}
-                      name="password"
-                      type="password"
-                      placeholder="Новый пароль"
-                      minLength={6}
-                      disabled={user.role === 'admin'}
-                    />
-                  </td>
-                  <td>
-                    <Flex gap="2" align="center" wrap="wrap">
-                      <select
-                        form={`user-${user.id}`}
-                        name="role"
-                        required={user.role !== 'admin'}
-                        disabled={user.role === 'admin'}
-                        defaultValue={user.role === 'admin' ? 'operator' : user.role}
-                      >
-                        {editableRoles.map((role) => (
-                          <option key={role} value={role}>
-                            {roleLabels[role]}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        form={`user-${user.id}`}
-                        type="submit"
-                        size="2"
-                        variant="soft"
-                        disabled={submitting || user.role === 'admin'}
-                      >
-                        <Save size={15} /> Сохранить
-                      </Button>
-                    </Flex>
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>Пользователи не найдены</td>
-                </tr>
+                    </Box>
+                    <Button type="submit" size="2" variant="soft" mt="4" disabled={submitting}>
+                      <Save size={15} /> Сохранить
+                    </Button>
+                  </form>
+                </details>
               ) : null}
-            </tbody>
-          </table>
-        </Box>
+            </Card>
+          ))}
+          {users.length === 0 ? (
+            <Card size="3">
+              <Text color="gray">Пользователи не найдены</Text>
+            </Card>
+          ) : null}
+        </Flex>
       )}
     </div>
   );
