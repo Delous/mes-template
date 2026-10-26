@@ -1,6 +1,8 @@
 'use client';
 
-import { Box, Button, Callout, Flex, Heading, Spinner, Text } from '@radix-ui/themes';
+import { Card } from '@radix-ui/themes';
+
+import { AlertDialog, Box, Button, Callout, Flex, Heading, Spinner, Text } from '@radix-ui/themes';
 import { AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 
 export function PageHeader({
@@ -48,7 +50,7 @@ export function ErrorNotice({ message }: { message: string | null }) {
 
 export function LoadingState({ label = 'Загрузка' }: { label?: string }) {
   return (
-    <Flex className="surface empty-state" align="center" justify="center" gap="3">
+    <Flex minHeight="180px" align="center" justify="center" gap="3">
       <Spinner />
       <Text color="gray">{label}</Text>
     </Flex>
@@ -57,9 +59,9 @@ export function LoadingState({ label = 'Загрузка' }: { label?: string })
 
 export function EmptyState({ label = 'Нет данных' }: { label?: string }) {
   return (
-    <Box className="surface" p="5">
+    <Card size="4">
       <Text color="gray">{label}</Text>
-    </Box>
+    </Card>
   );
 }
 
@@ -117,44 +119,29 @@ export function DeleteButton({
   onDelete: () => void;
 }) {
   return (
-    <Button
-      type="button"
-      size="2"
-      variant="soft"
-      color="red"
-      disabled={disabled}
-      onClick={() => {
-        if (window.confirm(confirmText)) onDelete();
-      }}
-    >
-      <Trash2 size={15} /> {label}
-    </Button>
+    <AlertDialog.Root>
+      <AlertDialog.Trigger>
+        <Button type="button" size="2" variant="soft" color="red" disabled={disabled}>
+          <Trash2 size={15} />
+          {label}
+        </Button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Content maxWidth="450px">
+        <AlertDialog.Title>{label}</AlertDialog.Title>
+        <AlertDialog.Description>{confirmText}</AlertDialog.Description>
+        <Flex gap="3" justify="end" mt="4">
+          <AlertDialog.Cancel>
+            <Button variant="soft" color="gray">
+              Отмена
+            </Button>
+          </AlertDialog.Cancel>
+          <AlertDialog.Action>
+            <Button color="red" disabled={disabled} onClick={onDelete}>
+              {label}
+            </Button>
+          </AlertDialog.Action>
+        </Flex>
+      </AlertDialog.Content>
+    </AlertDialog.Root>
   );
-}
-
-export function formatDate(value: string | null | undefined) {
-  if (!value) return 'Не указано';
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
-export function formatQuantity(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') return 'Не указано';
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) return String(value);
-  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(numeric);
-}
-
-export function toDecimal(value: FormDataEntryValue | null, digits = 2) {
-  const numeric = Number(
-    String(value ?? '')
-      .trim()
-      .replace(',', '.'),
-  );
-  return Number.isFinite(numeric) ? numeric.toFixed(digits) : (0).toFixed(digits);
 }

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { Box, Callout, Flex, Spinner, Text } from '@radix-ui/themes';
+import { PageLayout } from '@/components/page-layout';
+
+import { Callout, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ShieldAlert } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 import { useAuth } from './auth-context';
 
@@ -26,7 +28,7 @@ export function ProtectedRoute({
 
   if (status === 'loading' || status === 'anonymous') {
     return (
-      <Flex className="route-state" align="center" justify="center" gap="3">
+      <Flex minHeight="100vh" align="center" justify="center" gap="3">
         <Spinner />
         <Text color="gray">Проверяем сессию</Text>
       </Flex>
@@ -35,14 +37,14 @@ export function ProtectedRoute({
 
   if (requireAdmin && user?.role !== 'admin') {
     return (
-      <Box className="page-content">
+      <PageLayout>
         <Callout.Root color="red">
           <Callout.Icon>
             <ShieldAlert size={16} />
           </Callout.Icon>
           <Callout.Text>Раздел доступен только администратору.</Callout.Text>
         </Callout.Root>
-      </Box>
+      </PageLayout>
     );
   }
 

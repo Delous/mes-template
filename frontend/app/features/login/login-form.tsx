@@ -1,50 +1,10 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Button, Callout, Flex, Text, TextField } from '@radix-ui/themes';
 import { LockKeyhole, LogIn, User } from 'lucide-react';
-
-import { useAuth } from './auth-context';
-
-function getSafeNextPath(next: string | null) {
-  return next?.startsWith('/') && !next.startsWith('//') ? next : '/tasks';
-}
-
-export function LoginForm() {
-  const { login, status } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = getSafeNextPath(searchParams.get('next'));
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.replace(nextPath);
-    }
-  }, [nextPath, router, status]);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
-    const formData = new FormData(event.currentTarget);
-
-    try {
-      await login({
-        login: String(formData.get('username') ?? '').trim(),
-        password: String(formData.get('password') ?? ''),
-      });
-      router.replace(nextPath);
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Не удалось войти.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
+import type { PageModel } from './use-page';
+export function LoginForm({ model }: { model: PageModel }) {
+  const { error, submitting, handleSubmit } = model;
   return (
     <form onSubmit={handleSubmit}>
       <Flex direction="column" gap="4">
