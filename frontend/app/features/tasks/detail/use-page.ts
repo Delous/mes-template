@@ -40,6 +40,9 @@ export function useTaskPage() {
     if (!task) return;
 
     const formData = event ? new FormData(event.currentTarget) : new FormData();
+    if (user?.role === 'operator' && task.task_type === 'operation' && status === 'done') {
+      formData.set('actual_quantity_delta', task.planned_quantity);
+    }
     setSubmitting(true);
     setError(null);
 

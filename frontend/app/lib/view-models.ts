@@ -18,16 +18,6 @@ export function toTaskView(task: TaskDto) {
     plannedLabel: formatQuantity(task.planned_quantity),
     actualLabel: formatQuantity(task.actual_quantity),
     defectLabel: formatQuantity(task.defect_quantity),
-    workstationLabel:
-      [
-        ...new Set(task.routes.flatMap((route) => route.steps.map((step) => step.workstation))),
-      ].join(', ') ||
-      task.workstation?.name ||
-      'Не указан',
-    operationLabel:
-      [...new Set(task.routes.flatMap((route) => route.steps.map((step) => step.operation)))].join(
-        ', ',
-      ) || 'Не указана',
     pendingDependencies: task.dependencies.filter((dependency) => dependency.status !== 'done'),
   };
 }

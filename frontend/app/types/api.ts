@@ -207,11 +207,6 @@ export type TaskType = 'operation' | 'quality_review';
 export type TaskStatus = 'waiting' | 'to_do' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
 export type TaskUpdateStatus = TaskStatus | 'rejected';
 
-export type TaskWorkstationDto = {
-  id: number;
-  name: string;
-};
-
 export type TaskDto = {
   id: number;
   name: string;
@@ -226,13 +221,11 @@ export type TaskDto = {
   order: Pick<OrderDto, 'id' | 'number' | 'priority' | 'deadline'>;
   order_line_id: number;
   item_id: number;
-  workstation_id: number | null;
   item: {
     id: number;
     name: string;
     unit_id: number;
   };
-  workstation: TaskWorkstationDto | null;
   dependencies: TaskDependencyDto[];
   executor_id: number | null;
   created_at: string;

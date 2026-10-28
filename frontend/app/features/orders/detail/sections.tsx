@@ -4,8 +4,8 @@ import { DataTable } from '@/components/data-table';
 import { OrderPlanningFields } from '@/components/order-planning-fields';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 import { DeleteButton, ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
-import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
-import { Box, Button, Card, Flex, Grid, Heading } from '@radix-ui/themes';
+import { TaskStatusBadge } from '@/components/task-status';
+import { Box, Button, Card, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 import { ArrowLeft, Eye } from 'lucide-react';
 import Link from 'next/link';
 import type { PageModel } from './use-page';
@@ -97,15 +97,6 @@ export function OrderDetails({
           columns={[
             { key: 'column-0', header: 'ID', cell: (task) => <>{task.id}</> },
             {
-              key: 'column-1',
-              header: 'Тип',
-              cell: (task) => (
-                <>
-                  <TaskTypeBadge type={task.task_type} />
-                </>
-              ),
-            },
-            {
               key: 'column-2',
               header: 'Статус',
               cell: (task) => (
@@ -114,13 +105,23 @@ export function OrderDetails({
                 </>
               ),
             },
-            { key: 'column-3', header: 'Задача', cell: (task) => task.title },
-            { key: 'column-4', header: 'Номенклатура', cell: (task) => task.item.name },
+            {
+              key: 'column-3',
+              header: 'Задача',
+              cell: (task) => (
+                <>
+                  <Text as="div" weight="medium">
+                    {task.title}
+                  </Text>
+                  <Text as="div" size="2" color="gray">
+                    {task.orderLabel}
+                  </Text>
+                </>
+              ),
+            },
             { key: 'column-5', header: 'План', cell: (task) => task.plannedLabel },
             { key: 'actual', header: 'Факт', cell: (task) => task.actualLabel },
             { key: 'defect', header: 'Брак', cell: (task) => task.defectLabel },
-            { key: 'workstation', header: 'Рабочий пост', cell: (task) => task.workstationLabel },
-            { key: 'operation', header: 'Операция', cell: (task) => task.operationLabel },
             {
               key: 'column-6',
               header: 'Зависит от',

@@ -5,7 +5,7 @@ import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 
 import { ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
-import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
+import { TaskStatusBadge } from '@/components/task-status';
 import type { TaskDto, TaskUpdateStatus, UserRole } from '@/types/api';
 import { Button, Card, Flex, Grid, Text, TextArea, TextField } from '@radix-ui/themes';
 import { ArrowLeft, Check, Pause, Play, RotateCcw, XCircle } from 'lucide-react';
@@ -47,7 +47,6 @@ export function TaskDetails({
       <Card size="3" mb="4">
         <Flex align="center" justify="between" gap="3" wrap="wrap">
           <Flex gap="3" wrap="wrap">
-            <TaskTypeBadge type={task.task_type} />
             <TaskStatusBadge status={task.status} />
           </Flex>
           <TaskActions
@@ -62,9 +61,7 @@ export function TaskDetails({
       <Grid columns={{ initial: '1', md: '2' }} gap="4">
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
-            <Detail label="Заказ" value={task.orderLabel} />
             <OrderPlanningSummary order={task.order} />
-            <Detail label="Номенклатура" value={task.item.name} />
             <Detail label="План" value={task.plannedLabel} />
             <Detail label="Факт" value={task.actualLabel} />
             <Detail label="Брак" value={task.defectLabel} />
@@ -73,8 +70,6 @@ export function TaskDetails({
 
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
-            <Detail label="Рабочий пост" value={task.workstationLabel} />
-            <Detail label="Операция" value={task.operationLabel} />
             <Detail label="Обновлено" value={task.updatedLabel} />
           </Grid>
           <Flex mt="4">
@@ -111,7 +106,7 @@ function TaskActions({
   const canStart =
     task.status === 'to_do' && ['admin', 'operator', 'reviewer'].includes(role ?? '');
   const canResume = task.status === 'blocked' && ['admin', 'operator'].includes(role ?? '');
-  const canBlock = task.status === 'in_progress' && ['admin', 'operator'].includes(role ?? '');
+  const canBlock = task.status === 'in_progress' && role === 'admin';
   const canCompleteOperation =
     ['to_do', 'in_progress'].includes(task.status) &&
     task.task_type === 'operation' &&
@@ -156,7 +151,14 @@ function TaskActions({
       {canCompleteOperation ? (
         <form onSubmit={(event) => onTransition('done', event)}>
           <Flex gap="2" wrap="wrap" align="center">
-            <TextField.Root name="actual_quantity_delta" placeholder="Выпущено" size="2" required />
+            {role === 'admin' ? (
+              <TextField.Root
+                name="actual_quantity_delta"
+                placeholder="Выпущено"
+                size="2"
+                required
+              />
+            ) : null}
             <Button size="2" color="green" type="submit" disabled={submitting}>
               <Check size={15} /> Завершить
             </Button>

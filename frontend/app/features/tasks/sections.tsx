@@ -54,8 +54,6 @@ export function TasksList({
 
               <Grid columns={{ initial: '1', sm: '2' }} gap="3">
                 <OrderPlanningSummary order={task.order} />
-                <Detail label="Рабочий пост" value={task.workstationLabel} />
-                <Detail label="Операция" value={task.operationLabel} />
                 <Detail label="План" value={task.plannedLabel} />
                 <Detail label="Факт" value={task.actualLabel} />
                 <Detail label="Брак" value={task.defectLabel} />
