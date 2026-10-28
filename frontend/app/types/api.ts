@@ -203,6 +203,8 @@ export type TaskWorkstationDto = {
 
 export type TaskDto = {
   id: number;
+  name: string;
+  routes: TaskRouteDto[];
   task_type: TaskType;
   status: TaskStatus;
   description: string | null;
@@ -230,6 +232,25 @@ export type TaskDependencyDto = {
   description: string | null;
   status: TaskStatus;
   item: { id: number; name: string; unit_id: number };
+};
+
+export type TaskRouteDto = {
+  key: string;
+  name: string;
+  planned_quantity: string;
+  steps: {
+    operation_type_id: number;
+    workstation_id: number;
+    operation: string;
+    workstation: string;
+    materials: {
+      input_item_id: number | null;
+      source_route_key: string | null;
+      name: string;
+      quantity: string;
+      unit: string;
+    }[];
+  }[];
 };
 
 export type UpdateTaskPayload = {

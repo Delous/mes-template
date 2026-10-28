@@ -11,13 +11,23 @@ import { formatDate, formatQuantity } from './format';
 export function toTaskView(task: TaskDto) {
   return {
     ...task,
-    title: task.description || task.item.name,
+    title: `Сделать: ${task.name || task.item.name}`,
+    orderLabel: task.description || `Заказ #${task.order_id}`,
     createdLabel: formatDate(task.created_at),
     updatedLabel: formatDate(task.updated_at),
     plannedLabel: formatQuantity(task.planned_quantity),
     actualLabel: formatQuantity(task.actual_quantity),
     defectLabel: formatQuantity(task.defect_quantity),
-    workstationLabel: task.workstation?.name ?? 'Не указан',
+    workstationLabel:
+      [
+        ...new Set(task.routes.flatMap((route) => route.steps.map((step) => step.workstation))),
+      ].join(', ') ||
+      task.workstation?.name ||
+      'Не указан',
+    operationLabel:
+      [...new Set(task.routes.flatMap((route) => route.steps.map((step) => step.operation)))].join(
+        ', ',
+      ) || 'Не указана',
     pendingDependencies: task.dependencies.filter((dependency) => dependency.status !== 'done'),
   };
 }

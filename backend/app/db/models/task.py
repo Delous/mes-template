@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, ForeignKey, Index, Numeric, Text
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, Numeric, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,6 +23,7 @@ class Task(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     task_type: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    routes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     planned_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -106,12 +107,22 @@ class Task(Base, TimestampMixin):
     )
 
     __table_args__ = (
+        UniqueConstraint('order_id', 'item_id', name='uq_tasks_order_item'),
         Index("ix_tasks_order_id", "order_id"),
         Index("ix_tasks_order_line_id", "order_line_id"),
         Index("ix_tasks_status", "status"),
         Index("ix_tasks_task_type", "task_type"),
         Index("ix_tasks_workstation_id", "workstation_id"),
     )
+
+    @property
+    def name(self) -> str:
+        return self.item.name
+
+    @property
+    def workstation_ids(self) -> set[int]:
+        return {step['workstation_id'] for route in (self.routes or [])
+                for step in route['steps']} | ({self.workstation_id} if self.workstation_id else set())
 
 
 class TaskDependency(Base):

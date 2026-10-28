@@ -1,6 +1,7 @@
 'use client';
 
 import { Detail } from '@/components/detail';
+import { TaskRouteDialog } from '@/components/task-route-dialog';
 
 import { ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
@@ -14,8 +15,8 @@ export function PageHeading({ model }: { model: Pick<PageModel, 'task'> }) {
   const { task } = model;
   return (
     <PageHeader
-      title={task ? `Задача #${task.id}` : 'Задача'}
-      description={task ? task.title : undefined}
+      title={task ? task.title : 'Задача'}
+      description={task ? task.orderLabel : undefined}
       action={
         <Button asChild variant="soft" color="gray">
           <Link href="/tasks">
@@ -60,7 +61,7 @@ export function TaskDetails({
       <Grid columns={{ initial: '1', md: '2' }} gap="4">
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
-            <Detail label="Заказ" value={`#${task.order_id}`} />
+            <Detail label="Заказ" value={task.orderLabel} />
             <Detail label="Номенклатура" value={task.item.name} />
             <Detail label="План" value={task.plannedLabel} />
             <Detail label="Факт" value={task.actualLabel} />
@@ -71,8 +72,12 @@ export function TaskDetails({
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
             <Detail label="Рабочий пост" value={task.workstationLabel} />
+            <Detail label="Операция" value={task.operationLabel} />
             <Detail label="Обновлено" value={task.updatedLabel} />
           </Grid>
+          <Flex mt="4">
+            <TaskRouteDialog task={task} />
+          </Flex>
         </Card>
       </Grid>
       {task.pendingDependencies.length > 0 ? (
@@ -82,7 +87,7 @@ export function TaskDetails({
           </Text>
           {task.pendingDependencies.map((dependency) => (
             <Text key={dependency.id} as="div" size="2">
-              #{dependency.id} · {dependency.description || dependency.item.name}
+              #{dependency.id} · {dependency.item.name}
             </Text>
           ))}
         </Card>

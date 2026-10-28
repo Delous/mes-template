@@ -66,8 +66,33 @@ class TaskDependencyResponse(BaseModel):
         return getattr(value, "depends_on_task", value)
 
 
+class TaskRouteMaterialResponse(BaseModel):
+    input_item_id: int | None = None
+    source_route_key: str | None = None
+    name: str
+    quantity: Decimal
+    unit: str
+
+
+class TaskRouteStepResponse(BaseModel):
+    operation_type_id: int
+    workstation_id: int
+    operation: str
+    workstation: str
+    materials: list[TaskRouteMaterialResponse]
+
+
+class TaskRouteResponse(BaseModel):
+    key: str
+    name: str
+    planned_quantity: Decimal
+    steps: list[TaskRouteStepResponse]
+
+
 class TaskResponse(BaseModel):
     id: int
+    name: str
+    routes: list[TaskRouteResponse]
     task_type: TaskType
     status: TaskStatus
     description: str | None

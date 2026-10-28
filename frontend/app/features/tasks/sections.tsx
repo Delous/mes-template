@@ -1,6 +1,7 @@
 'use client';
 
 import { Detail } from '@/components/detail';
+import { TaskRouteDialog } from '@/components/task-route-dialog';
 
 import {
   EmptyState,
@@ -9,7 +10,7 @@ import {
   PageHeader,
   Pagination,
 } from '@/components/page-tools';
-import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
+import { TaskStatusBadge } from '@/components/task-status';
 import { Box, Button, Card, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 import { Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -44,17 +45,18 @@ export function TasksList({
                 <Box>
                   <Heading size="4">{task.title}</Heading>
                   <Text size="2" color="gray">
-                    Заказ #{task.order_id} · {task.createdLabel}
+                    {task.orderLabel}
                   </Text>
                 </Box>
                 <TaskStatusBadge status={task.status} />
               </Flex>
 
               <Grid columns={{ initial: '1', sm: '2' }} gap="3">
-                <Detail label="Тип" value={<TaskTypeBadge type={task.task_type} />} />
-                <Detail label="Номенклатура" value={task.item.name} />
-                <Detail label="План" value={task.plannedLabel} />
                 <Detail label="Рабочий пост" value={task.workstationLabel} />
+                <Detail label="Операция" value={task.operationLabel} />
+                <Detail label="План" value={task.plannedLabel} />
+                <Detail label="Факт" value={task.actualLabel} />
+                <Detail label="Брак" value={task.defectLabel} />
               </Grid>
 
               {task.pendingDependencies.length > 0 ? (
@@ -64,12 +66,13 @@ export function TasksList({
                   </Text>
                   {task.pendingDependencies.map((dependency) => (
                     <Text key={dependency.id} as="div" size="2" color="gray">
-                      #{dependency.id} · {dependency.description || dependency.item.name}
+                      #{dependency.id} · {dependency.item.name}
                     </Text>
                   ))}
                 </Box>
               ) : null}
 
+              <TaskRouteDialog task={task} />
               <Button asChild variant="soft" color="gray">
                 <Link href={`/tasks/${task.id}`}>
                   <Eye size={15} /> Подробнее

@@ -1,6 +1,7 @@
 'use client';
 
 import { DataTable } from '@/components/data-table';
+import { TaskRouteDialog } from '@/components/task-route-dialog';
 import { DeleteButton, ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
 import { Box, Button, Card, Flex, Grid, Heading } from '@radix-ui/themes';
@@ -91,16 +92,20 @@ export function OrderDetails({ model }: { model: Pick<PageModel, 'order' | 'load
                 </>
               ),
             },
-            { key: 'column-3', header: 'Описание', cell: (task) => task.title },
+            { key: 'column-3', header: 'Задача', cell: (task) => task.title },
             { key: 'column-4', header: 'Номенклатура', cell: (task) => task.item.name },
             { key: 'column-5', header: 'План', cell: (task) => task.plannedLabel },
+            { key: 'actual', header: 'Факт', cell: (task) => task.actualLabel },
+            { key: 'defect', header: 'Брак', cell: (task) => task.defectLabel },
+            { key: 'workstation', header: 'Рабочий пост', cell: (task) => task.workstationLabel },
+            { key: 'operation', header: 'Операция', cell: (task) => task.operationLabel },
             {
               key: 'column-6',
               header: 'Зависит от',
               cell: (task) =>
                 task.dependencies.map((dependency) => (
                   <div key={dependency.id}>
-                    #{dependency.id} · {dependency.description || dependency.item.name}
+                    #{dependency.id} · {dependency.item.name}
                   </div>
                 )),
             },
@@ -109,6 +114,7 @@ export function OrderDetails({ model }: { model: Pick<PageModel, 'order' | 'load
               header: '',
               cell: (task) => (
                 <>
+                  <TaskRouteDialog task={task} />
                   <Button asChild size="2" variant="soft" color="gray">
                     <Link href={`/tasks/${task.id}`}>
                       <Eye size={15} /> Открыть

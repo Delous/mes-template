@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
-from sqlalchemy import and_, case, false, or_, true
+from sqlalchemy import and_, case, cast, false, or_, true
+from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.schema import UserPublic
 from app.db.models.task import Task
@@ -18,7 +19,10 @@ def visible_task_filter(user: UserPublic):
     if user.role == "operator":
         return and_(
             Task.task_type.in_(OPERATOR_TASK_TYPES),
-            Task.workstation_id.in_(user.workstation_ids),
+            or_(Task.workstation_id.in_(user.workstation_ids), *[
+                cast(Task.routes, JSONB).contains([{'steps': [{'workstation_id': workstation_id}]}])
+                for workstation_id in user.workstation_ids
+            ]),
             or_(
                 and_(
                     Task.status == "in_progress",
@@ -50,7 +54,7 @@ def can_view_task(user: UserPublic, task: Task) -> bool:
     if user.role == "operator":
         if task.task_type not in OPERATOR_TASK_TYPES:
             return False
-        if task.workstation_id not in user.workstation_ids:
+        if not task.workstation_ids.intersection(user.workstation_ids):
             return False
         if task.status == "in_progress":
             return task.executor_id == user.id
@@ -90,7 +94,7 @@ def validate_update_task_status(
     if user.role == "operator":
         if (
             task.task_type not in OPERATOR_TASK_TYPES
-            or task.workstation_id not in user.workstation_ids
+            or not task.workstation_ids.intersection(user.workstation_ids)
         ):
             raise HTTPException(status_code=403, detail="Task update is forbidden")
 

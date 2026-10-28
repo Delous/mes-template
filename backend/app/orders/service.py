@@ -11,6 +11,9 @@ from sqlalchemy.orm import selectinload
 from app.core.schema import UserPublic
 from app.db.models.item import Item
 from app.db.models.operation_type import OperationType
+from app.db.models.workstation import Workstation
+from app.db.models.unit import Unit
+from app.tasks.planning import plan_order, snapshot_routes
 from app.db.models.order import Order, OrderLine
 from app.db.models.task import Task, TaskDependency
 from app.db.models.task_history import TaskHistory
@@ -41,127 +44,33 @@ async def get_active_item(session: AsyncSession, item_id: int) -> Item:
     return item
 
 
-async def get_item_with_routes(
-    session: AsyncSession,
-    item_id: int,
-) -> Item | None:
-    result = await session.execute(
-        select(Item).where(Item.id == item_id, Item.deleted_at.is_(None))
-    )
-    return result.scalar_one_or_none()
-
-
-async def add_dependency(
-    session: AsyncSession,
-    task: Task,
-    depends_on: Task | None,
-) -> None:
-    if depends_on is None:
-        return
-    session.add(
-        TaskDependency(
-            task_id=task.id,
-            depends_on_task_id=depends_on.id,
-        )
-    )
-
-
-async def create_tasks_for_item(
-    session: AsyncSession,
-    order: Order,
-    line: OrderLine,
-    item_id: int,
-    required_quantity: Decimal,
-    stack: set[int],
-) -> list[Task]:
-    if item_id in stack:
-        raise HTTPException(status_code=409, detail="Cyclic item composition dependency detected")
-
-    item = await get_item_with_routes(session, item_id)
-    if item is not None and item.routes:
-        stack.add(item_id)
-        result = await create_tasks_for_routes(session, order, line, item, required_quantity, stack)
-        stack.remove(item_id)
-        return result
-    return []
-
-
-async def create_tasks_for_routes(session, order, line, item, required_quantity, stack):
-    routes = {route["key"]: route for route in item.routes}
-    referenced = {m["source_route_key"] for r in item.routes for step in r["steps"] for m in step["materials"] if m.get("source_route_key")}
-    sinks = [key for key in routes if key not in referenced]
-    quantities = {key: Decimal("0") for key in routes}
-    visiting = set()
-
-    def demand(key, quantity):
-        if key in visiting or key not in routes:
-            raise HTTPException(409, "Некорректная зависимость маршрутов")
-        visiting.add(key)
-        quantity = quantity.quantize(Decimal("0.01"), rounding="ROUND_CEILING")
-        quantities[key] += quantity
-        route = routes[key]
-        for step in route["steps"]:
-            for material in step["materials"]:
-                if material.get("source_route_key"):
-                    demand(material["source_route_key"], Decimal(str(material["quantity"])) * quantity / Decimal(str(route["output_quantity"])))
-        visiting.remove(key)
-
-    for key in sinks:
-        demand(key, required_quantity)
-    if not sinks:
-        raise HTTPException(409, "Циклическая зависимость маршрутов")
-    completed: dict[str, tuple[Task, int]] = {}
-
-    async def new_task(kind, description, quantity, item_id, workstation, status="waiting"):
-        task = Task(task_type=kind, status=status, description=description,
-                    planned_quantity=quantity, actual_quantity=Decimal("0"), defect_quantity=Decimal("0"),
-                    order_id=order.id, order_line_id=line.id, item_id=item_id,
-                    workstation_id=workstation)
+async def create_order_tasks(session: AsyncSession, order: Order, lines: list[OrderLine]) -> None:
+    records = (await session.scalars(select(Item))).all()
+    items = {item.id: dict(id=item.id, name=item.name, unit_id=item.unit_id, routes=item.routes)
+             for item in records}
+    try:
+        plans = plan_order(items, [dict(id=line.id, item_id=line.item_id, quantity=line.quantity)
+                                   for line in lines])
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    operations = dict((await session.execute(select(OperationType.id, OperationType.name))).all())
+    workstations = dict((await session.execute(select(Workstation.id, Workstation.name))).all())
+    units = dict((await session.execute(select(Unit.id, Unit.symbol))).all())
+    tasks = {}
+    for item_id, plan in plans.items():
+        routes = snapshot_routes(plan, items, operations, workstations, units)
+        task = Task(task_type='operation', status='waiting', description=order.number,
+                    planned_quantity=plan['quantity'], actual_quantity=Decimal('0'),
+                    defect_quantity=Decimal('0'), order_id=order.id,
+                    order_line_id=plan['line_id'], item_id=item_id, routes=routes,
+                    workstation_id=routes[0]['steps'][0]['workstation_id'])
         session.add(task)
-        await session.flush()
-        return task
-
-    async def build(key):
-        if key in completed:
-            return completed[key]
-        route = routes[key]
-        quantity = quantities[key].quantize(Decimal("0.01"), rounding="ROUND_CEILING")
-        multiplier = quantity / Decimal(str(route["output_quantity"]))
-        route_prerequisites = []
-        for route_step in route["steps"]:
-            for material in route_step["materials"]:
-                source_key = material.get("source_route_key")
-                if source_key:
-                    prerequisite, _ = await build(source_key)
-                    route_prerequisites.append(prerequisite)
-        previous = None
-        previous_post = None
-        for index, step in enumerate(route["steps"]):
-            post = step["workstation_id"]
-            dependencies = list(route_prerequisites) if index == 0 else []
-            if previous:
-                dependencies.append(previous)
-            for material in step["materials"]:
-                if material.get("source_route_key"):
-                    await build(material["source_route_key"])
-                else:
-                    quantity_needed = (Decimal(str(material["quantity"])) * multiplier).quantize(Decimal("0.01"), rounding="ROUND_CEILING")
-                    dependencies.extend(await create_tasks_for_item(session, order, line, material["input_item_id"], quantity_needed, stack))
-            operation = await session.get(OperationType, step["operation_type_id"])
-            previous = await new_task("operation", f'{route["name"]}: шаг {index + 1} — {operation.name}', quantity, item.id, post)
-            for dependency in {task.id: task for task in dependencies}.values():
-                await add_dependency(session, previous, dependency)
-            previous_post = post
-        if previous is None:
-            raise HTTPException(status_code=409, detail="Route must contain at least one operation")
-        completed[key] = previous, previous_post
-        return previous, previous_post
-
-    final_tasks = []
-    for key in sinks:
-        task, _ = await build(key)
-        final_tasks.append(task)
-    return final_tasks
+        tasks[item_id] = task
+    await session.flush()
+    for item_id, plan in plans.items():
+        for dependency in plan['dependencies']:
+            session.add(TaskDependency(task_id=tasks[item_id].id,
+                                       depends_on_task_id=tasks[dependency].id))
 
 
 async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Order:
@@ -175,6 +84,7 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
     session.add(order)
     await session.flush()
 
+    lines = []
     for line_payload in payload.lines:
         await get_active_item(session, line_payload.item_id)
         line = OrderLine(
@@ -184,14 +94,8 @@ async def create_order(session: AsyncSession, payload: CreateOrderRequest) -> Or
         )
         session.add(line)
         await session.flush()
-        await create_tasks_for_item(
-            session,
-            order,
-            line,
-            line.item_id,
-            line.quantity,
-            set(),
-        )
+        lines.append(line)
+    await create_order_tasks(session, order, lines)
     # Autoflush is disabled: persist every dependency before checking readiness.
     # activate_ready_tasks eagerly loads dependencies, avoiding async lazy loads.
     await session.flush()
