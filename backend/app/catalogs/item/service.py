@@ -81,6 +81,7 @@ async def duplicate_item(session: AsyncSession, item_id: int, variant: bool) -> 
     suffix = "вариант" if variant else "копия"
     name = f"{source.name[:210]} ({suffix} {uuid4().hex[:12]})"
     item = Item(name=name, unit_id=source.unit_id, description=source.description,
+                labor_minutes=source.labor_minutes,
                 routes=source.routes, is_product=source.is_product,
                 group_uuid=source.group_uuid if variant else uuid4(), is_main=not variant)
     session.add(item)

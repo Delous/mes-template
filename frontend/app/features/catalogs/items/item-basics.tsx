@@ -1,7 +1,7 @@
 'use client';
 
-import { CheckboxField, Field, SelectField } from '@/components/form-fields';
-import { Button, Card, Flex, Grid, Text, TextArea } from '@radix-ui/themes';
+import { CheckboxField, Field, FormField, SelectField } from '@/components/form-fields';
+import { Box, Button, Card, Flex, Grid, Text, TextArea, TextField } from '@radix-ui/themes';
 import { GitBranch, Save } from 'lucide-react';
 import { canSave } from './model';
 import type { PageModel } from './use-page';
@@ -59,6 +59,20 @@ export function ItemBasics({
           onChange={(event) => setDraft({ ...draft, description: event.target.value })}
         />
       </Text>
+
+      <Box mt="3">
+        <FormField label="Трудоёмкость (мин)">
+          <TextField.Root
+            type="number"
+            min={0}
+            max={2147483647}
+            step={1}
+            placeholder="Не указана"
+            value={draft.labor_minutes}
+            onChange={(event) => setDraft({ ...draft, labor_minutes: event.target.value })}
+          />
+        </FormField>
+      </Box>
 
       <Flex align="center" justify="between" gap="4" mt="4" wrap="wrap">
         <Flex gap="3" wrap="wrap">

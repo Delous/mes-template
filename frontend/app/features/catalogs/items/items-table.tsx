@@ -31,14 +31,18 @@ export function ItemsTable({
         {
           key: 'description',
           header: 'Описание',
-          cell: (item) =>
-            variants ? (
-              item.description || 'Описание не указано'
-            ) : (
-              <Text color={item.description ? undefined : 'gray'}>
+          cell: (item) => (
+            <>
+              <Text as="div" color={item.description ? undefined : 'gray'}>
                 {item.description || 'Описание не указано'}
               </Text>
-            ),
+              {item.labor_minutes != null && (
+                <Text as="div" size="2" color="gray" mt="1">
+                  Трудоёмкость: {item.labor_minutes} мин
+                </Text>
+              )}
+            </>
+          ),
         },
         { key: 'product', header: 'Изделие', cell: (item) => (item.is_product ? 'Да' : 'Нет') },
         {

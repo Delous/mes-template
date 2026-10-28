@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from app.db.models.task import Task
     from app.db.models.unit import Unit
 
-from sqlalchemy import JSON, BigInteger, Boolean, ForeignKey, Index, Text, Uuid, text
+from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Integer, Text, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -27,6 +27,7 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
     )
     routes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    labor_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unit: Mapped["Unit"] = relationship(
         back_populates="items",
     )
@@ -40,6 +41,7 @@ class Item(Base, TimestampMixin, SoftDeleteMixin):
     )
 
     __table_args__ = (
+        CheckConstraint('labor_minutes >= 0', name='ck_items_labor_minutes_non_negative'),
         Index("ix_items_group_uuid", "group_uuid"),
         Index("uq_items_group_main", "group_uuid", unique=True, postgresql_where=text("is_main AND deleted_at IS NULL")),
         Index("ix_items_name", "name"),

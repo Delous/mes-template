@@ -7,6 +7,7 @@ export type ItemDraft = {
   name: string;
   unit_id: number;
   description: string;
+  labor_minutes: string;
   is_product: boolean;
   routes: ItemRoute[];
 };
@@ -23,6 +24,7 @@ export function emptyDraft(unit_id: number): ItemDraft {
     name: '',
     unit_id,
     description: '',
+    labor_minutes: '',
     is_product: false,
     routes: [],
   };
@@ -33,6 +35,7 @@ export function fromItem(item: ItemDto): ItemDraft {
     name: item.name,
     unit_id: item.unit_id,
     description: item.description ?? '',
+    labor_minutes: item.labor_minutes == null ? '' : String(item.labor_minutes),
     is_product: item.is_product,
     routes: structuredClone(item.routes),
   };
@@ -42,6 +45,8 @@ export function canSave(d: ItemDraft) {
   return Boolean(
     d.name.trim() &&
     d.unit_id &&
+    (d.labor_minutes === '' ||
+      (/^\d+$/.test(d.labor_minutes) && Number(d.labor_minutes) <= 2147483647)) &&
     d.routes.every(
       (r) =>
         r.name.trim() &&
@@ -65,6 +70,7 @@ export function toItemPayload(draft: ItemDraft): ItemPayload {
     name: draft.name.trim(),
     unit_id: draft.unit_id,
     description: draft.description.trim() || null,
+    labor_minutes: draft.labor_minutes === '' ? null : Number(draft.labor_minutes),
     is_product: draft.is_product,
     routes: draft.routes.map((route) => ({
       ...route,
