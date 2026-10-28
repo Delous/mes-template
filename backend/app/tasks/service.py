@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.schema import UserPublic
 from app.db.models.task import Task, TaskDependency
+from app.db.models.order import Order
 from app.db.models.task_history import TaskHistory
 from app.tasks.access import (
     can_view_task,
@@ -35,6 +36,7 @@ async def validate_dependencies_ready(session: AsyncSession, task: Task) -> None
 def task_options():
     return [
         selectinload(Task.item),
+        selectinload(Task.order),
         selectinload(Task.workstation),
         selectinload(Task.dependencies).selectinload(TaskDependency.depends_on_task).selectinload(Task.item),
     ]
@@ -228,7 +230,10 @@ async def task_list(
         select(Task)
         .options(*task_options())
         .where(visible_task_filter(user))
+        .join(Task.order)
         .order_by(
+            Order.deadline.asc().nulls_last(),
+            case((Order.priority == 'high', 0), (Order.priority == 'medium', 1), else_=2),
             task_status_order_expression(),
             Task.created_at.asc(),
             Task.id.asc(),

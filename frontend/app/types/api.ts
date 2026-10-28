@@ -168,7 +168,14 @@ export type OrderLinePayload = {
   quantity: string;
 };
 
-export type CreateOrderPayload = {
+export type OrderPriority = 'medium' | 'high';
+
+export type UpdateOrderPayload = {
+  priority?: OrderPriority | null;
+  deadline?: string | null;
+};
+
+export type CreateOrderPayload = UpdateOrderPayload & {
   number: string;
   lines: OrderLinePayload[];
 };
@@ -183,6 +190,8 @@ export type OrderDto = {
   id: number;
   number: string;
   status: string;
+  priority: OrderPriority | null;
+  deadline: string | null;
   created_at: string;
   updated_at: string;
   lines: OrderLineDto[];
@@ -212,6 +221,7 @@ export type TaskDto = {
   actual_quantity: string;
   defect_quantity: string;
   order_id: number;
+  order: Pick<OrderDto, 'id' | 'number' | 'priority' | 'deadline'>;
   order_line_id: number;
   item_id: number;
   workstation_id: number | null;

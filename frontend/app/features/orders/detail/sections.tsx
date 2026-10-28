@@ -1,6 +1,8 @@
 'use client';
 
 import { DataTable } from '@/components/data-table';
+import { OrderPlanningFields } from '@/components/order-planning-fields';
+import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 import { DeleteButton, ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
@@ -44,12 +46,36 @@ export function PageError({ model }: { model: Pick<PageModel, 'error'> }) {
   return <ErrorNotice message={error} />;
 }
 
-export function OrderDetails({ model }: { model: Pick<PageModel, 'order' | 'loading'> }) {
-  const { order, loading } = model;
+export function OrderDetails({
+  model,
+}: {
+  model: Pick<PageModel, 'order' | 'loading' | 'saving' | 'handleSave'>;
+}) {
+  const { order, loading, saving, handleSave } = model;
   return loading ? (
     <LoadingState label="Загружаем заказ" />
   ) : order ? (
     <Grid columns="1" gap="4">
+      <Card size="3">
+        <Heading size="4" mb="3">
+          Приоритет и дедлайн
+        </Heading>
+        <Grid columns={{ initial: '1', sm: '2' }} gap="3" mb="4">
+          <OrderPlanningSummary order={order} />
+        </Grid>
+        <form key={`${order.id}-${order.updated_at}`} onSubmit={handleSave}>
+          <Grid columns={{ initial: '1', sm: '2' }} gap="3" mb="3">
+            <OrderPlanningFields
+              priority={order.priority}
+              deadlineDate={order.deadline}
+              disabled={saving}
+            />
+          </Grid>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Сохраняем…' : 'Сохранить'}
+          </Button>
+        </form>
+      </Card>
       <Card>
         <Box p="4" pb="0">
           <Heading size="4">Строки заказа</Heading>

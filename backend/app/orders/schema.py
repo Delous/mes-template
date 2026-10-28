@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.tasks.schema import TaskResponse
 
@@ -17,7 +18,22 @@ class CreateOrderRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     number: str = Field(min_length=1, max_length=128)
+    priority: Literal['medium', 'high'] | None = 'medium'
+    deadline: date | None = None
     lines: list[CreateOrderLineRequest] = Field(min_length=1)
+
+
+class UpdateOrderRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    priority: Literal['medium', 'high'] | None = None
+    deadline: date | None = None
+
+    @model_validator(mode='after')
+    def validate_patch(self):
+        if not self.model_fields_set:
+            raise ValueError('Укажите приоритет или дедлайн')
+        return self
 
 
 class OrderLineResponse(BaseModel):
@@ -32,6 +48,8 @@ class OrderResponse(BaseModel):
     id: int
     number: str
     status: str
+    priority: Literal['medium', 'high'] | None
+    deadline: date | None
     created_at: datetime
     updated_at: datetime
     lines: list[OrderLineResponse]

@@ -3,6 +3,7 @@
 import { OrderLine } from './order-line';
 
 import { FormField } from '@/components/form-fields';
+import { OrderPlanningFields } from '@/components/order-planning-fields';
 import { ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { Button, Card, Flex, Grid, TextField } from '@radix-ui/themes';
 import { ArrowLeft, Plus } from 'lucide-react';
@@ -13,7 +14,7 @@ export function PageHeading() {
   return (
     <PageHeader
       title="Новый заказ"
-      description="После создания backend построит производственные или складские задачи по номенклатуре."
+      description="После создания заказа появятся задачи на производство номенклатур."
       action={
         <Button asChild variant="soft" color="gray">
           <Link href="/orders">
@@ -56,6 +57,7 @@ export function CreateOrderForm({
           <FormField label={'Номер заказа'}>
             <TextField.Root name="number" mt="2" required maxLength={128} placeholder="ORD-002" />
           </FormField>
+          <OrderPlanningFields disabled={submitting} />
         </Grid>
 
         <Flex direction="column" gap="4">

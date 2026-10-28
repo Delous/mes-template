@@ -6,10 +6,12 @@ if TYPE_CHECKING:
     from app.db.models.task import Task
 
 from decimal import Decimal
+from datetime import date
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Date,
     ForeignKey,
     Index,
     Numeric,
@@ -27,6 +29,8 @@ class Order(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     number: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     status: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[str | None] = mapped_column(Text().evaluates_none(), nullable=True, default='medium', server_default='medium')
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     lines: Mapped[list["OrderLine"]] = relationship(
         back_populates="order",
@@ -41,6 +45,7 @@ class Order(Base, TimestampMixin):
     )
 
     __table_args__ = (
+        CheckConstraint("priority IN ('medium', 'high')", name='ck_orders_priority'),
         Index("ix_orders_status", "status"),
     )
 

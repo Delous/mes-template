@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -89,6 +89,15 @@ class TaskRouteResponse(BaseModel):
     steps: list[TaskRouteStepResponse]
 
 
+class TaskOrderResponse(BaseModel):
+    id: int
+    number: str
+    priority: Literal['medium', 'high'] | None
+    deadline: date | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskResponse(BaseModel):
     id: int
     name: str
@@ -100,6 +109,7 @@ class TaskResponse(BaseModel):
     actual_quantity: Decimal
     defect_quantity: Decimal
     order_id: int
+    order: TaskOrderResponse
     order_line_id: int
     item_id: int
     workstation_id: int | None

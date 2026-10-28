@@ -1,5 +1,6 @@
 import { toDecimal } from '../../../lib/format';
 import type { OrderLinePayload } from '@/types/api';
+import { toOrderPlanningPayload } from '../../../lib/order-planning';
 
 export type DraftLine = {
   id: number;
@@ -23,6 +24,7 @@ export function toOrderPayload(formData: FormData, lines: DraftLine[]) {
     quantity: toDecimal(formData.get(`quantity-${line.id}`)),
   }));
   return {
+    ...toOrderPlanningPayload(formData),
     number: String(formData.get('number') ?? '').trim(),
     lines: payloadLines,
   };

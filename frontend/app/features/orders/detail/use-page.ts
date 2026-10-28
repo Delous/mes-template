@@ -3,9 +3,11 @@
 import { toOrderDetailView, type OrderDetailView } from '@/lib/view-models';
 
 import { useAuth } from '@/components/auth-context';
-import { deleteOrder, getAllItems, getOrder, normalizeApiError } from '@/lib/api';
+import { deleteOrder, getAllItems, getOrder, normalizeApiError, updateOrder } from '@/lib/api';
+import { toOrderPlanningPayload } from '@/lib/order-planning';
+import type { ItemDto } from '@/types/api';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 export function useOrderPage() {
   const params = useParams<{ id: string }>();
@@ -15,6 +17,8 @@ export function useOrderPage() {
   const [order, setOrder] = useState<OrderDetailView | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [items, setItems] = useState<ItemDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadOrder = useCallback(async () => {
@@ -27,6 +31,7 @@ export function useOrderPage() {
         getAllItems(false),
       ]);
       setOrder(toOrderDetailView(orderResponse, itemResponse));
+      setItems(itemResponse);
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {
@@ -53,6 +58,22 @@ export function useOrderPage() {
     }
   }
 
-  return { user, order, loading, deleting, error, handleDelete };
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!order || saving) return;
+    const formData = new FormData(event.currentTarget);
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateOrder(order.id, toOrderPlanningPayload(formData));
+      setOrder(toOrderDetailView(updated, items));
+    } catch (caughtError) {
+      setError(normalizeApiError(caughtError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return { user, order, loading, deleting, saving, error, handleDelete, handleSave };
 }
 export type PageModel = ReturnType<typeof useOrderPage>;

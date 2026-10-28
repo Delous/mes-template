@@ -1,6 +1,7 @@
 'use client';
 
 import { Detail } from '@/components/detail';
+import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 
 import {
@@ -52,6 +53,7 @@ export function TasksList({
               </Flex>
 
               <Grid columns={{ initial: '1', sm: '2' }} gap="3">
+                <OrderPlanningSummary order={task.order} />
                 <Detail label="Рабочий пост" value={task.workstationLabel} />
                 <Detail label="Операция" value={task.operationLabel} />
                 <Detail label="План" value={task.plannedLabel} />

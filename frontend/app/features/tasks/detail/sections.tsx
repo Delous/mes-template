@@ -1,6 +1,7 @@
 'use client';
 
 import { Detail } from '@/components/detail';
+import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 
 import { ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
@@ -62,6 +63,7 @@ export function TaskDetails({
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
             <Detail label="Заказ" value={task.orderLabel} />
+            <OrderPlanningSummary order={task.order} />
             <Detail label="Номенклатура" value={task.item.name} />
             <Detail label="План" value={task.plannedLabel} />
             <Detail label="Факт" value={task.actualLabel} />

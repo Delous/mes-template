@@ -16,6 +16,7 @@ import type {
   OrderDto,
   TaskDto,
   UpdateTaskPayload,
+  UpdateOrderPayload,
   UpdateUserPayload,
 } from '@/types/api';
 
@@ -173,6 +174,11 @@ export async function createOrder(payload: CreateOrderPayload) {
 export async function deleteOrder(id: number) {
   if (useMockApi) return mockApi.deleteOrder(id);
   await apiClient.delete(`/api/v1/orders/${id}`);
+}
+
+export async function updateOrder(id: number, payload: UpdateOrderPayload) {
+  const response = await apiClient.patch<OrderDetailDto>(`/api/v1/orders/${id}`, payload);
+  return response.data;
 }
 
 export async function getCatalog<R extends CatalogResource>(

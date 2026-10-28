@@ -9,7 +9,7 @@ from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
 from app.db.session import get_session
 from app.orders import service
-from app.orders.schema import CreateOrderRequest, OrderDetailResponse, OrderListResponse
+from app.orders.schema import CreateOrderRequest, OrderDetailResponse, OrderListResponse, UpdateOrderRequest
 
 
 router = APIRouter(prefix="/api/v1/orders", tags=["orders"])
@@ -50,3 +50,13 @@ async def delete_order(
     user: UserPublic = Depends(get_current_user),
 ):
     await service.delete_order(session, id, user)
+
+
+@router.patch('/{id}', response_model=OrderDetailResponse)
+async def update_order(
+    id: Annotated[int, Path(gt=0)],
+    payload: UpdateOrderRequest,
+    session: AsyncSession = Depends(get_session),
+    user: UserPublic = Depends(get_current_user),
+):
+    return await service.update_order(session, id, payload)
