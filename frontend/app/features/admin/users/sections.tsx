@@ -127,7 +127,7 @@ export function UsersList({
                     }))}
                   />
                   <FormField label={'Новый пароль'}>
-                    <TextField.Root name="password" type="password" mt="2" minLength={6} />
+                    <TextField.Root name="password" type="password" minLength={6} />
                   </FormField>
                 </Grid>
                 <Box mt="3" role="group" aria-label="Рабочие посты">
