@@ -30,7 +30,6 @@ def order_detail_options():
         selectinload(Order.lines),
         selectinload(Order.tasks).selectinload(Task.item),
         selectinload(Order.tasks).selectinload(Task.order),
-        selectinload(Order.tasks).selectinload(Task.workstation),
         selectinload(Order.tasks).selectinload(Task.dependencies).selectinload(TaskDependency.depends_on_task).selectinload(Task.item),
     ]
 
@@ -63,8 +62,7 @@ async def create_order_tasks(session: AsyncSession, order: Order, lines: list[Or
         task = Task(task_type='operation', status='waiting', description=order.number,
                     planned_quantity=plan['quantity'], actual_quantity=Decimal('0'),
                     defect_quantity=Decimal('0'), order_id=order.id,
-                    order_line_id=plan['line_id'], item_id=item_id, routes=routes,
-                    workstation_id=routes[0]['steps'][0]['workstation_id'])
+                    order_line_id=plan['line_id'], item_id=item_id, routes=routes)
         session.add(task)
         tasks[item_id] = task
     await session.flush()

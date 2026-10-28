@@ -36,13 +36,6 @@ class UpdateTaskRequest(BaseModel):
     comment: str | None = None
 
 
-class TaskWorkstationResponse(BaseModel):
-    id: int
-    name: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class TaskItemResponse(BaseModel):
     id: int
     name: str
@@ -112,9 +105,7 @@ class TaskResponse(BaseModel):
     order: TaskOrderResponse
     order_line_id: int
     item_id: int
-    workstation_id: int | None
     item: TaskItemResponse
-    workstation: TaskWorkstationResponse | None
     dependencies: list[TaskDependencyResponse]
     executor_id: int | None
     created_at: datetime

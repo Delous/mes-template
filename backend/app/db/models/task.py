@@ -6,7 +6,6 @@ if TYPE_CHECKING:
     from app.db.models.order import Order, OrderLine
     from app.db.models.task_history import TaskHistory
     from app.db.models.user import User
-    from app.db.models.workstation import Workstation
 
 from decimal import Decimal
 
@@ -54,11 +53,6 @@ class Task(Base, TimestampMixin):
         nullable=False,
     )
 
-    workstation_id: Mapped[int | None] = mapped_column(
-        ForeignKey("workstations.id"),
-        nullable=True,
-    )
-
     executor_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id"),
         nullable=True,
@@ -74,11 +68,6 @@ class Task(Base, TimestampMixin):
 
     order_line: Mapped["OrderLine"] = relationship(
         back_populates="tasks",
-    )
-
-    workstation: Mapped["Workstation"] = relationship(
-        back_populates="tasks",
-        foreign_keys=[workstation_id],
     )
 
     executor: Mapped["User | None"] = relationship(
@@ -112,17 +101,11 @@ class Task(Base, TimestampMixin):
         Index("ix_tasks_order_line_id", "order_line_id"),
         Index("ix_tasks_status", "status"),
         Index("ix_tasks_task_type", "task_type"),
-        Index("ix_tasks_workstation_id", "workstation_id"),
     )
 
     @property
     def name(self) -> str:
         return self.item.name
-
-    @property
-    def workstation_ids(self) -> set[int]:
-        return {step['workstation_id'] for route in (self.routes or [])
-                for step in route['steps']} | ({self.workstation_id} if self.workstation_id else set())
 
 
 class TaskDependency(Base):

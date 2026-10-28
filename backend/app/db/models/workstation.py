@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.db.models.task import Task
     from app.db.models.user_workstation import UserWorkstation
 
 from sqlalchemy import BigInteger, Text
@@ -19,9 +18,4 @@ class Workstation(Base):
         back_populates="workstation",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )
-
-    tasks: Mapped[list["Task"]] = relationship(
-        back_populates="workstation",
-        foreign_keys="Task.workstation_id",
     )

@@ -37,7 +37,6 @@ def task_options():
     return [
         selectinload(Task.item),
         selectinload(Task.order),
-        selectinload(Task.workstation),
         selectinload(Task.dependencies).selectinload(TaskDependency.depends_on_task).selectinload(Task.item),
     ]
 

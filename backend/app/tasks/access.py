@@ -12,6 +12,10 @@ from app.tasks.status_model import OPERATOR_TASK_TYPES, TASK_STATUS_FLOW
 VISIBLE_ACTIVE_STATUSES = {"waiting", "to_do", "in_progress", "blocked"}
 
 
+def route_workstation_ids(task: Task) -> set[int]:
+    return {step['workstation_id'] for route in (task.routes or []) for step in route['steps']}
+
+
 def visible_task_filter(user: UserPublic):
     if user.role == "admin":
         return true()
@@ -19,7 +23,7 @@ def visible_task_filter(user: UserPublic):
     if user.role == "operator":
         return and_(
             Task.task_type.in_(OPERATOR_TASK_TYPES),
-            or_(Task.workstation_id.in_(user.workstation_ids), *[
+            or_(false(), *[
                 cast(Task.routes, JSONB).contains([{'steps': [{'workstation_id': workstation_id}]}])
                 for workstation_id in user.workstation_ids
             ]),
@@ -54,7 +58,7 @@ def can_view_task(user: UserPublic, task: Task) -> bool:
     if user.role == "operator":
         if task.task_type not in OPERATOR_TASK_TYPES:
             return False
-        if not task.workstation_ids.intersection(user.workstation_ids):
+        if not route_workstation_ids(task).intersection(user.workstation_ids):
             return False
         if task.status == "in_progress":
             return task.executor_id == user.id
@@ -94,7 +98,7 @@ def validate_update_task_status(
     if user.role == "operator":
         if (
             task.task_type not in OPERATOR_TASK_TYPES
-            or not task.workstation_ids.intersection(user.workstation_ids)
+            or not route_workstation_ids(task).intersection(user.workstation_ids)
         ):
             raise HTTPException(status_code=403, detail="Task update is forbidden")
 

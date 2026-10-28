@@ -41,7 +41,7 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
     },
     "in_progress": {
         "blocked": {
-            "roles": {"operator", "admin"},
+            "roles": {"admin"},
         },
         "done": {
             "roles": {"operator", "reviewer", "admin"},
