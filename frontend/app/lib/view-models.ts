@@ -12,7 +12,7 @@ export function toTaskView(task: TaskDto) {
   return {
     ...task,
     title: `Сделать: ${task.name || task.item.name}`,
-    orderLabel: task.description || `Заказ #${task.order_id}`,
+    orderLabel: task.description || `Заказ №${task.order_id}`,
     createdLabel: formatDate(task.created_at),
     updatedLabel: formatDate(task.updated_at),
     plannedLabel: formatQuantity(task.planned_quantity),
@@ -50,7 +50,7 @@ export function toOrderDetailView(order: OrderDetailDto, items: ItemDto[]) {
     ...toOrderView(order),
     lines: order.lines.map((line) => ({
       ...line,
-      itemName: names.get(line.item_id) ?? `#${line.item_id}`,
+      itemName: names.get(line.item_id) ?? `${line.item_id}`,
       quantityLabel: formatQuantity(line.quantity),
     })),
     tasks: order.tasks.map(toTaskView),

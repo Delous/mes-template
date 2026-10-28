@@ -51,7 +51,7 @@ export function OrdersTable({
           rowKey={(order) => order.id}
           columns={[
             { key: 'column-0', header: 'ID', cell: (order) => order.id },
-            { key: 'column-1', header: 'Номер', cell: (order) => order.number },
+            { key: 'column-1', header: 'Заказ', cell: (order) => order.number },
             {
               key: 'column-2',
               header: 'Статус',

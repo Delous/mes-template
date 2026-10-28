@@ -2,7 +2,6 @@
 
 import { DataTable } from '@/components/data-table';
 import { OrderPlanningFields } from '@/components/order-planning-fields';
-import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 import { DeleteButton, ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { TaskStatusBadge, TaskTypeBadge } from '@/components/task-status';
@@ -60,9 +59,6 @@ export function OrderDetails({
         <Heading size="4" mb="3">
           Приоритет и дедлайн
         </Heading>
-        <Grid columns={{ initial: '1', sm: '2' }} gap="3" mb="4">
-          <OrderPlanningSummary order={order} />
-        </Grid>
         <form key={`${order.id}-${order.updated_at}`} onSubmit={handleSave}>
           <Grid columns={{ initial: '1', sm: '2' }} gap="3" mb="3">
             <OrderPlanningFields
@@ -99,7 +95,7 @@ export function OrderDetails({
           rows={order.tasks}
           rowKey={(task) => task.id}
           columns={[
-            { key: 'column-0', header: 'ID', cell: (task) => <>#{task.id}</> },
+            { key: 'column-0', header: 'ID', cell: (task) => <>{task.id}</> },
             {
               key: 'column-1',
               header: 'Тип',
@@ -131,7 +127,7 @@ export function OrderDetails({
               cell: (task) =>
                 task.dependencies.map((dependency) => (
                   <div key={dependency.id}>
-                    #{dependency.id} · {dependency.item.name}
+                    {dependency.id} · {dependency.item.name}
                   </div>
                 )),
             },

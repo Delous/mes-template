@@ -89,7 +89,7 @@ export function TaskDetails({
           </Text>
           {task.pendingDependencies.map((dependency) => (
             <Text key={dependency.id} as="div" size="2">
-              #{dependency.id} · {dependency.item.name}
+              {dependency.id} · {dependency.item.name}
             </Text>
           ))}
         </Card>

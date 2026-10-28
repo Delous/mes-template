@@ -54,8 +54,8 @@ export function CreateOrderForm({
     <Card size="3">
       <form onSubmit={handleSubmit}>
         <Grid columns={{ initial: '1', md: '3' }} gap="3" mb="5">
-          <FormField label={'Номер заказа'}>
-            <TextField.Root name="number" mt="2" required maxLength={128} placeholder="ORD-002" />
+          <FormField label={'Название заказа'}>
+            <TextField.Root name="number" required maxLength={128} placeholder="ORD-01" />
           </FormField>
           <OrderPlanningFields disabled={submitting} />
         </Grid>
