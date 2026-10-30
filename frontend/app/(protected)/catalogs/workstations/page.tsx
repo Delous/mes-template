@@ -1,6 +1,7 @@
 'use client';
 
 import { PageLayout } from '@/components/page-layout';
+import { ListTools } from '@/components/list-tools';
 import {
   CreateWorkstationForm,
   PageError,
@@ -18,6 +19,7 @@ export default function WorkstationsPage() {
       <PageNavigation />
       <PageError model={model} />
       <CreateWorkstationForm model={model} />
+      <ListTools query={model.query} onChange={model.setQuery} />
       <WorkstationsTable model={model} />
     </PageLayout>
   );

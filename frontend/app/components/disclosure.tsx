@@ -3,8 +3,16 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { Box, Button } from '@radix-ui/themes';
 import { useState, type ReactNode } from 'react';
-export function Disclosure({ title, children }: { title: ReactNode; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+export function Disclosure({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: ReactNode;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen} asChild>
       <Box mt="3">

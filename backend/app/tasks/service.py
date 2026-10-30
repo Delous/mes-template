@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import case, func, select
+from typing import Literal
+
+from sqlalchemy import String, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.schema import UserPublic
+from app.core.list_query import search_filter
+from app.db.models.item import Item
 from app.db.models.task import Task, TaskDependency
 from app.db.models.order import Order
 from app.db.models.task_history import TaskHistory
@@ -214,31 +218,65 @@ async def get_task_by_id(
     return task
 
 
+TaskSort = Literal["planning", "id_asc", "id_desc", "name_asc", "name_desc", "status"]
+
+
+def task_title_expression():
+    route = func.json_array_elements(Task.routes).table_valued("value")
+    route_name = (
+        select(func.json_extract_path_text(route.c.value, "name"))
+        .where(func.json_extract_path_text(route.c.value, "key") == Task.route_key)
+        .correlate(Task)
+        .scalar_subquery()
+    )
+    return case(
+        (Task.route_key.is_not(None) & Task.step_number.is_not(None),
+         route_name + " | шаг " + cast(Task.step_number, String)),
+        else_=Item.name,
+    )
+
+
 async def task_list(
     session: AsyncSession,
     user: UserPublic,
     page: int,
     size: int,
+    search: str = "",
+    status: str | None = None,
+    task_type: str | None = None,
+    sort: TaskSort = "planning",
 ):
+    filters = [visible_task_filter(user)]
+    if search.strip():
+        filters.append(search_filter(search, Task.id, task_title_expression(), Item.name, Task.description, Order.number))
+    if status is not None:
+        filters.append(Task.status == status)
+    if task_type is not None:
+        filters.append(Task.task_type == task_type)
+    ordering = {
+        "planning": [Order.deadline.asc().nulls_last(),
+                     case((Order.priority == 'high', 0), (Order.priority == 'medium', 1), else_=2),
+                     task_status_order_expression(), Task.created_at.asc()],
+        "id_asc": [Task.id.asc()],
+        "id_desc": [Task.id.desc()],
+        "name_asc": [func.lower(task_title_expression()).asc()],
+        "name_desc": [func.lower(task_title_expression()).desc()],
+        "status": [task_status_order_expression()],
+    }[sort]
     total_result = await session.execute(
         select(func.count())
         .select_from(Task)
-        .where(visible_task_filter(user))
+        .join(Task.order).join(Task.item)
+        .where(*filters)
     )
     total = total_result.scalar_one()
 
     result = await session.execute(
         select(Task)
         .options(*task_options())
-        .where(visible_task_filter(user))
-        .join(Task.order)
-        .order_by(
-            Order.deadline.asc().nulls_last(),
-            case((Order.priority == 'high', 0), (Order.priority == 'medium', 1), else_=2),
-            task_status_order_expression(),
-            Task.created_at.asc(),
-            Task.id.asc(),
-        )
+        .where(*filters)
+        .join(Task.order).join(Task.item)
+        .order_by(*ordering, Task.id.asc())
         .offset((page - 1) * size)
         .limit(size)
     )

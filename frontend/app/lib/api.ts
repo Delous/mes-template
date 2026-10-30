@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { listQueryParams, type ListQuery } from './list-query';
 
 import type {
   AdminUserDto,
@@ -131,10 +132,10 @@ export async function getMe() {
   return response.data;
 }
 
-export async function getTasks(page = 1, size = 20) {
+export async function getTasks(page = 1, size = 20, query?: ListQuery) {
   if (useMockApi) return mockApi.getTasks(page, size);
   const response = await apiClient.get<ListResponse<TaskDto>>('/api/v1/tasks', {
-    params: { page, size },
+    params: { page, size, ...(query ? listQueryParams(query) : {}) },
   });
   return response.data;
 }
@@ -188,12 +189,14 @@ export async function getCatalog<R extends CatalogResource>(
   includeDeleted = false,
   onlyProducts = false,
   grouped = true,
+  query?: ListQuery,
 ) {
   if (useMockApi) return mockApi.getCatalog(resource, page, size, includeDeleted, onlyProducts);
   const params: Record<string, string | number | boolean> = {
     page,
     size,
     include_deleted: includeDeleted,
+    ...(query ? listQueryParams(query) : {}),
   };
   if (resource === 'items') params.grouped = grouped;
   if (resource === 'items' && onlyProducts) params.is_product = true;
@@ -267,10 +270,14 @@ export async function itemAction(id: number, action: 'copy' | 'variants' | 'make
 }
 
 export async function getAllItems(grouped = true) {
-  const items: CatalogDtoMap['items'][] = [];
+  return getAllCatalog('items', grouped);
+}
+
+export async function getAllCatalog<R extends CatalogResource>(resource: R, grouped = true) {
+  const items: CatalogDtoMap[R][] = [];
   let page = 1;
   while (true) {
-    const response = await getCatalog('items', page++, 100, false, false, grouped);
+    const response = await getCatalog(resource, page++, 100, false, false, grouped);
     items.push(...response.items);
     if (items.length >= response.total || !response.items.length) return items;
   }

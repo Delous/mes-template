@@ -15,6 +15,7 @@ from app.catalogs.item.schema import (
 from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
 from app.db.session import get_session
+from app.core.list_query import CatalogSort
 
 
 router = APIRouter(prefix="/items")
@@ -27,10 +28,13 @@ async def get_items(
     include_deleted: bool = False,
     is_product: bool | None = None,
     grouped: bool = True,
+    search: Annotated[str, Query(max_length=256)] = "",
+    unit_id: Annotated[int | None, Query(gt=0)] = None,
+    sort: CatalogSort = "name_asc",
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_items(session, page, size, include_deleted, is_product, grouped)
+    return await service.list_items(session, page, size, include_deleted, is_product, grouped, search, unit_id, sort)
 
 
 @router.get("/{id}", response_model=ItemResponse)

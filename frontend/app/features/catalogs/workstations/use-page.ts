@@ -1,44 +1,66 @@
 'use client';
+import { useListQuery } from '@/lib/use-list-query';
 
 import { toNamePayload } from './model';
 
 import { createCatalogItem, getCatalog, normalizeApiError, updateCatalogItem } from '@/lib/api';
 import type { WorkstationDto } from '@/types/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { pageSize } from './model';
 
 export function useWorkstationsPage() {
   const [items, setItems] = useState<WorkstationDto[]>([]);
-  const [page, setPage] = useState(1);
+  const { query, setQuery, page, setPage } = useListQuery('id_asc');
+  const requestVersion = useRef(0);
+  const invalidateRequests = useCallback(() => {
+    requestVersion.current++;
+  }, []);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
     try {
-      const response = await getCatalog('workstations', page, pageSize);
+      const response = await getCatalog('workstations', page, pageSize, false, false, true, query);
+      if (version !== requestVersion.current) return;
+      if (page > 1 && !response.items.length) {
+        setPage(Math.max(1, Math.ceil(response.total / pageSize)));
+        return;
+      }
       setItems(response.items);
       setTotal(response.total);
     } catch (caughtError) {
-      setError(normalizeApiError(caughtError));
+      if (version === requestVersion.current) setError(normalizeApiError(caughtError));
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
-  }, [page]);
+  }, [page, query, setPage]);
 
+  const reload = useRef(loadItems);
   useEffect(() => {
-    void loadItems();
+    reload.current = loadItems;
   }, [loadItems]);
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      void loadItems();
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      invalidateRequests();
+    };
+  }, [loadItems, invalidateRequests]);
 
   async function run(action: () => Promise<unknown>) {
     setSubmitting(true);
     setError(null);
     try {
       await action();
-      await loadItems();
+      await reload.current();
     } catch (caughtError) {
       setError(normalizeApiError(caughtError));
     } finally {
@@ -64,6 +86,8 @@ export function useWorkstationsPage() {
 
   return {
     items,
+    query,
+    setQuery,
     page,
     setPage,
     total,

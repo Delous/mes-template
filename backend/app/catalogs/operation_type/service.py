@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.catalogs.common.repository import list_entities
+from app.core.list_query import CatalogSort, catalog_order, search_filter
 
 from app.catalogs.common.service import (
     apply_fields,
@@ -18,20 +20,12 @@ async def list_operation_types(
     session: AsyncSession,
     page: int,
     size: int,
+    search: str = "",
+    sort: CatalogSort = "id_asc",
 ) -> dict:
-    total_result = await session.execute(select(func.count()).select_from(OperationType))
-    result = await session.execute(
-        select(OperationType)
-        .order_by(OperationType.id.asc())
-        .offset((page - 1) * size)
-        .limit(size)
-    )
-    return {
-        "items": list(result.scalars().all()),
-        "total": total_result.scalar_one(),
-        "page": page,
-        "size": size,
-    }
+    filters = [search_filter(search, OperationType.id, OperationType.name)] if search.strip() else []
+    return await list_entities(session, OperationType, page, size, False,
+                               order_by=catalog_order(OperationType, sort), filters=filters)
 
 
 async def get_operation_type_by_id(

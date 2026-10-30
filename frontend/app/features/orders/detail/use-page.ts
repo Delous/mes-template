@@ -5,11 +5,14 @@ import { toOrderDetailView, type OrderDetailView } from '@/lib/view-models';
 import { useAuth } from '@/components/auth-context';
 import { deleteOrder, getAllItems, getOrder, normalizeApiError, updateOrder } from '@/lib/api';
 import { toOrderPlanningPayload } from '@/lib/order-planning';
+import { useListQuery } from '@/lib/use-list-query';
+import { filterTasks } from '@/features/tasks/filter-tasks';
 import type { ItemDto } from '@/types/api';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 export function useOrderPage() {
+  const { query: taskQuery, setQuery: setTaskQuery } = useListQuery('planning');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -74,6 +77,19 @@ export function useOrderPage() {
     }
   }
 
-  return { user, order, loading, deleting, saving, error, handleDelete, handleSave };
+  const visibleTasks = filterTasks(order?.tasks ?? [], taskQuery);
+  return {
+    user,
+    order,
+    loading,
+    deleting,
+    saving,
+    error,
+    handleDelete,
+    handleSave,
+    taskQuery,
+    setTaskQuery,
+    visibleTasks,
+  };
 }
 export type PageModel = ReturnType<typeof useOrderPage>;

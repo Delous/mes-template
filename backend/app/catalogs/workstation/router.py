@@ -15,6 +15,7 @@ from app.catalogs.workstation.schema import (
 from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
 from app.db.session import get_session
+from app.core.list_query import CatalogSort
 
 
 router = APIRouter(prefix="/workstations")
@@ -24,10 +25,12 @@ router = APIRouter(prefix="/workstations")
 async def get_workstations(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
+    search: Annotated[str, Query(max_length=256)] = "",
+    sort: CatalogSort = "id_asc",
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_workstations(session, page, size)
+    return await service.list_workstations(session, page, size, search, sort)
 
 
 @router.post("", response_model=WorkstationResponse, status_code=status.HTTP_201_CREATED)

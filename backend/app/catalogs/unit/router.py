@@ -10,6 +10,7 @@ from app.catalogs.unit.schema import UnitCreate, UnitListResponse, UnitResponse,
 from app.core.dependencies import get_current_user
 from app.core.schema import UserPublic
 from app.db.session import get_session
+from app.core.list_query import CatalogSort
 
 
 router = APIRouter(prefix="/units")
@@ -20,10 +21,12 @@ async def get_units(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=100)] = 20,
     include_deleted: bool = False,
+    search: Annotated[str, Query(max_length=256)] = "",
+    sort: CatalogSort = "id_asc",
     session: AsyncSession = Depends(get_session),
     user: UserPublic = Depends(get_current_user),
 ):
-    return await service.list_units(session, page, size, include_deleted)
+    return await service.list_units(session, page, size, include_deleted, search, sort)
 
 
 @router.get("/{id}", response_model=UnitResponse)

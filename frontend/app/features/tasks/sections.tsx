@@ -1,6 +1,7 @@
 'use client';
 
 import { Detail } from '@/components/detail';
+import { TaskListTools } from '@/components/list-tools';
 import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 
@@ -21,6 +22,10 @@ export function PageHeading() {
   return <PageHeader title="Задачи" />;
 }
 
+export function PageFilters({ model }: { model: Pick<PageModel, 'query' | 'setQuery'> }) {
+  return <TaskListTools query={model.query} onChange={model.setQuery} />;
+}
+
 export function PageError({ model }: { model: Pick<PageModel, 'error'> }) {
   const { error } = model;
   return <ErrorNotice message={error} />;
@@ -35,7 +40,7 @@ export function TasksList({
   return loading ? (
     <LoadingState label="Загружаем задачи" />
   ) : tasks.length === 0 ? (
-    <EmptyState label="Нет задач" />
+    <EmptyState label="Задачи не найдены. Попробуйте изменить условия поиска." />
   ) : (
     <>
       <Grid columns={{ initial: '1', lg: '2' }} gap="4">

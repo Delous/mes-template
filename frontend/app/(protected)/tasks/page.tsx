@@ -1,7 +1,7 @@
 'use client';
 
 import { PageLayout } from '@/components/page-layout';
-import { PageError, PageHeading, TasksList } from '@/features/tasks/sections';
+import { PageError, PageFilters, PageHeading, TasksList } from '@/features/tasks/sections';
 import { useTasksPage } from '@/features/tasks/use-page';
 
 export default function TasksPage() {
@@ -10,6 +10,7 @@ export default function TasksPage() {
     <PageLayout>
       <PageHeading />
       <PageError model={model} />
+      <PageFilters model={model} />
       <TasksList model={model} />
     </PageLayout>
   );

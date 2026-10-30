@@ -10,11 +10,13 @@ export function ItemsTable({
   onOpen,
   variants = false,
   label,
+  expandVariants = false,
 }: {
   items: ItemDto[];
   onOpen: (item: ItemDto) => void;
   variants?: boolean;
   label?: string;
+  expandVariants?: boolean;
 }) {
   return (
     <DataTable
@@ -60,7 +62,10 @@ export function ItemsTable({
           ? undefined
           : (item) =>
               item.variants.length ? (
-                <Disclosure title={<>Варианты ({item.variants.length})</>}>
+                <Disclosure
+                  defaultOpen={expandVariants}
+                  title={<>Варианты ({item.variants.length})</>}
+                >
                   <ItemsTable
                     items={item.variants}
                     variants

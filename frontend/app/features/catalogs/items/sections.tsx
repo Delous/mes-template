@@ -3,7 +3,8 @@
 import { ItemsTable } from './items-table';
 
 import { CatalogNav } from '@/components/catalog-nav';
-import { CheckboxField } from '@/components/form-fields';
+import { SelectField } from '@/components/form-fields';
+import { ListTools } from '@/components/list-tools';
 import {
   EmptyState,
   ErrorNotice,
@@ -39,39 +40,58 @@ export function PageError({ model }: { model: Pick<PageModel, 'error'> }) {
   return <ErrorNotice message={error} />;
 }
 
-export function PageFilters({
-  model,
-}: {
-  model: Pick<PageModel, 'setPage' | 'onlyProducts' | 'setOnlyProducts'>;
-}) {
-  const { setPage, onlyProducts, setOnlyProducts } = model;
+export function PageFilters({ model }: { model: Pick<PageModel, 'query' | 'setQuery' | 'units'> }) {
+  const { query, setQuery, units } = model;
   return (
-    <CheckboxField
-      checked={onlyProducts}
-      onCheckedChange={(value) => {
-        setOnlyProducts(value === true);
-        setPage(1);
-      }}
+    <ListTools
+      query={query}
+      onChange={setQuery}
+      defaultSort="name_asc"
+      placeholder="Название, описание или ID (включая варианты)"
     >
-      Показать только изделия
-    </CheckboxField>
+      <SelectField
+        label="Изделие"
+        value={query.is_product}
+        options={[
+          { id: 'all', name: 'Все' },
+          { id: 'true', name: 'Только изделия' },
+          { id: 'false', name: 'Не изделия' },
+        ]}
+        onChange={(is_product) => setQuery({ ...query, is_product })}
+      />
+      <SelectField
+        label="Единица измерения"
+        value={query.unit_id}
+        options={[
+          { id: 'all', name: 'Все единицы' },
+          ...units.map((unit) => ({ id: String(unit.id), name: `${unit.name} (${unit.symbol})` })),
+        ]}
+        onChange={(unit_id) => setQuery({ ...query, unit_id })}
+      />
+    </ListTools>
   );
 }
 
 export function ItemsList({
   model,
 }: {
-  model: Pick<PageModel, 'items' | 'page' | 'setPage' | 'total' | 'loading' | 'openItem'>;
+  model: Pick<PageModel, 'items' | 'page' | 'setPage' | 'total' | 'loading' | 'openItem' | 'query'>;
 }) {
-  const { items, page, setPage, total, loading, openItem } = model;
+  const { items, page, setPage, total, loading, openItem, query } = model;
   return loading ? (
     <LoadingState />
   ) : !items.length ? (
-    <EmptyState />
+    <EmptyState label="Номенклатура не найдена. Попробуйте изменить условия поиска." />
   ) : (
     <>
       <Card>
-        <ItemsTable items={items} onOpen={openItem} />
+        <ItemsTable
+          items={items}
+          onOpen={openItem}
+          expandVariants={
+            Boolean(query.search.trim()) || query.is_product !== 'all' || query.unit_id !== 'all'
+          }
+        />
       </Card>
       <Pagination page={page} size={pageSize} total={total} onPageChange={setPage} />
     </>

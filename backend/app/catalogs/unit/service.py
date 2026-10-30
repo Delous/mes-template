@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.catalogs.common.repository import list_entities
+from app.core.list_query import CatalogSort, catalog_order, search_filter
 from app.catalogs.common.service import (
     apply_fields,
     ensure_update_payload,
@@ -20,8 +21,12 @@ async def list_units(
     page: int,
     size: int,
     include_deleted: bool,
+    search: str = "",
+    sort: CatalogSort = "id_asc",
 ) -> dict:
-    return await list_entities(session, Unit, page, size, include_deleted)
+    filters = [search_filter(search, Unit.id, Unit.name, Unit.symbol)] if search.strip() else []
+    return await list_entities(session, Unit, page, size, include_deleted,
+                               order_by=catalog_order(Unit, sort), filters=filters)
 
 
 async def get_unit_by_id(session: AsyncSession, unit_id: int) -> Unit:

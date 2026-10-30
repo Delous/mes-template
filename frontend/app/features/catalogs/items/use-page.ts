@@ -1,4 +1,5 @@
 'use client';
+import { useListQuery } from '@/lib/use-list-query';
 
 import { buildTree } from './load-tree';
 import { toItemPayload } from './model';
@@ -6,6 +7,7 @@ import { toItemPayload } from './model';
 import {
   createCatalogItem,
   getAllItems,
+  getAllCatalog,
   getCatalog,
   getCatalogItem,
   itemAction,
@@ -20,7 +22,7 @@ import type {
   UnitDto,
   WorkstationDto,
 } from '@/types/api';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ItemDraft, TreeNode, emptyDraft, fromItem, pageSize } from './model';
 
 export function useItemsPage() {
@@ -34,9 +36,12 @@ export function useItemsPage() {
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [treeVisible, setTreeVisible] = useState(false);
   const [open, setOpen] = useState(false);
-  const [page, setPage] = useState(1);
+  const { query, setQuery, page, setPage } = useListQuery('name_asc');
+  const requestVersion = useRef(0);
+  const invalidateRequests = useCallback(() => {
+    requestVersion.current++;
+  }, []);
   const [total, setTotal] = useState(0);
-  const [onlyProducts, setOnlyProducts] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,30 +51,57 @@ export function useItemsPage() {
     [allItems, editorItem?.id],
   );
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
+    setError(null);
     try {
-      const [listed, all, us, ops, posts] = await Promise.all([
-        getCatalog('items', page, pageSize, false, onlyProducts),
-        getAllItems(false),
-        getCatalog('units', 1, 100),
-        getCatalog('operation-types', 1, 100),
-        getCatalog('workstations', 1, 100),
-      ]);
+      const listed = await getCatalog('items', page, pageSize, false, false, true, query);
+      if (version !== requestVersion.current) return;
+      if (page > 1 && !listed.items.length) {
+        setPage(Math.max(1, Math.ceil(listed.total / pageSize)));
+        return;
+      }
       setItems(listed.items);
       setTotal(listed.total);
+    } catch (e) {
+      if (version === requestVersion.current) setError(normalizeApiError(e));
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }, [page, query, setPage]);
+  const loadReferences = useCallback(async () => {
+    try {
+      const [all, us, ops, posts] = await Promise.all([
+        getAllItems(false),
+        getAllCatalog('units'),
+        getAllCatalog('operation-types'),
+        getAllCatalog('workstations'),
+      ]);
       setAllItems(all);
-      setUnits(us.items);
-      setOperationTypes(ops.items);
-      setWorkstations(posts.items);
+      setUnits(us);
+      setOperationTypes(ops);
+      setWorkstations(posts);
     } catch (e) {
       setError(normalizeApiError(e));
-    } finally {
-      setLoading(false);
     }
-  }, [page, onlyProducts]);
+  }, []);
   useEffect(() => {
-    void load();
+    void loadReferences();
+  }, [loadReferences]);
+  const reload = useRef(load);
+  useEffect(() => {
+    reload.current = load;
   }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      void load();
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      invalidateRequests();
+    };
+  }, [load, invalidateRequests]);
   function openNew() {
     setEditorItem(null);
     setDraft(emptyDraft(units[0]?.id ?? 0));
@@ -104,7 +136,7 @@ export function useItemsPage() {
         : await createCatalogItem('items', payload);
       setEditorItem(saved);
       setDraft(fromItem(saved));
-      await load();
+      await Promise.all([reload.current(), loadReferences()]);
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: CycleConflictDetail } } }).response
         ?.data?.detail;
@@ -120,7 +152,7 @@ export function useItemsPage() {
     setError(null);
     try {
       openItem(await itemAction(editorItem.id, action));
-      await load();
+      await Promise.all([reload.current(), loadReferences()]);
     } catch (e) {
       setError(normalizeApiError(e));
     } finally {
@@ -153,8 +185,8 @@ export function useItemsPage() {
     page,
     setPage,
     total,
-    onlyProducts,
-    setOnlyProducts,
+    query,
+    setQuery,
     loading,
     submitting,
     error,

@@ -14,18 +14,30 @@ from app.db.models.item import Item
 from app.db.models.operation_type import OperationType
 from app.db.models.unit import Unit
 from app.db.models.workstation import Workstation
+from app.core.list_query import CatalogSort, catalog_order, search_filter
 
 def item_options() -> list[Any]:
     return [selectinload(Item.unit)]
-async def list_items(session: AsyncSession, page: int, size: int, include_deleted: bool, is_product: bool | None = None, grouped: bool = True) -> dict:
+async def list_items(session: AsyncSession, page: int, size: int, include_deleted: bool, is_product: bool | None = None, grouped: bool = True, search: str = "", unit_id: int | None = None, sort: CatalogSort = "name_asc") -> dict:
     filters = [Item.is_main.is_(True)] if grouped else []
+    matches = []
     if is_product is not None:
-        matching = select(Item.group_uuid).where(Item.is_product.is_(is_product), Item.deleted_at.is_(None))
-        filters.append(Item.group_uuid.in_(matching) if grouped else Item.is_product.is_(is_product))
-    result = await list_entities(session, Item, page, size, include_deleted, item_options(), [Item.name.asc(), Item.id.asc()], filters)
+        matches.append(Item.is_product.is_(is_product))
+    if search.strip():
+        matches.append(search_filter(search, Item.id, Item.name, Item.description))
+    if unit_id is not None:
+        matches.append(Item.unit_id == unit_id)
+    if matches:
+        matching = select(Item.group_uuid).where(*matches)
+        if not include_deleted:
+            matching = matching.where(Item.deleted_at.is_(None))
+        filters.extend([Item.group_uuid.in_(matching)] if grouped else matches)
+    result = await list_entities(session, Item, page, size, include_deleted, item_options(), catalog_order(Item, sort), filters)
     if grouped and result["items"]:
         groups = [item.group_uuid for item in result["items"]]
-        query = select(Item).where(Item.group_uuid.in_(groups), Item.is_main.is_(False)).options(*item_options()).order_by(Item.created_at, Item.id)
+        query = select(Item).where(Item.group_uuid.in_(groups), Item.is_main.is_(False)).options(*item_options()).order_by(*catalog_order(Item, sort))
+        if matches:
+            query = query.where(*matches)
         if not include_deleted:
             query = query.where(Item.deleted_at.is_(None))
         variants = (await session.scalars(query)).all()

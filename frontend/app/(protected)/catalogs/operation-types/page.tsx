@@ -1,6 +1,7 @@
 'use client';
 
 import { PageLayout } from '@/components/page-layout';
+import { ListTools } from '@/components/list-tools';
 import {
   CreateOperationTypeForm,
   OperationTypesTable,
@@ -18,6 +19,7 @@ export default function OperationTypesPage() {
       <PageNavigation />
       <PageError model={model} />
       <CreateOperationTypeForm model={model} />
+      <ListTools query={model.query} onChange={model.setQuery} />
       <OperationTypesTable model={model} />
     </PageLayout>
   );

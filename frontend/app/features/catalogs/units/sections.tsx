@@ -2,6 +2,7 @@
 
 import { CatalogNav } from '@/components/catalog-nav';
 import { DataTable } from '@/components/data-table';
+import { ListTools } from '@/components/list-tools';
 import { CheckboxField, FormField } from '@/components/form-fields';
 import {
   DeleteButton,
@@ -31,10 +32,21 @@ export function PageError({ model }: { model: Pick<PageModel, 'error'> }) {
 export function PageFilters({
   model,
 }: {
-  model: Pick<PageModel, 'includeDeleted' | 'setIncludeDeleted'>;
+  model: Pick<PageModel, 'includeDeleted' | 'setIncludeDeleted' | 'query' | 'setQuery' | 'setPage'>;
 }) {
-  const { includeDeleted, setIncludeDeleted } = model;
-  return <IncludeDeleted checked={includeDeleted} onCheckedChange={setIncludeDeleted} />;
+  const { includeDeleted, setIncludeDeleted, query, setQuery, setPage } = model;
+  return (
+    <>
+      <ListTools query={query} onChange={setQuery} placeholder="Название, обозначение или ID" />
+      <IncludeDeleted
+        checked={includeDeleted}
+        onCheckedChange={(value) => {
+          setIncludeDeleted(value);
+          setPage(1);
+        }}
+      />
+    </>
+  );
 }
 
 export function CreateUnitForm({

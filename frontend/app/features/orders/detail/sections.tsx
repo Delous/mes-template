@@ -1,6 +1,7 @@
 'use client';
 
 import { DataTable } from '@/components/data-table';
+import { TaskListTools } from '@/components/list-tools';
 import { OrderPlanningFields } from '@/components/order-planning-fields';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
 import { DeleteButton, ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
@@ -48,9 +49,12 @@ export function PageError({ model }: { model: Pick<PageModel, 'error'> }) {
 export function OrderDetails({
   model,
 }: {
-  model: Pick<PageModel, 'order' | 'loading' | 'saving' | 'handleSave'>;
+  model: Pick<
+    PageModel,
+    'order' | 'loading' | 'saving' | 'handleSave' | 'taskQuery' | 'setTaskQuery' | 'visibleTasks'
+  >;
 }) {
-  const { order, loading, saving, handleSave } = model;
+  const { order, loading, saving, handleSave, taskQuery, setTaskQuery, visibleTasks } = model;
   return loading ? (
     <LoadingState label="Загружаем заказ" />
   ) : order ? (
@@ -89,10 +93,21 @@ export function OrderDetails({
 
       <Card>
         <Box p="4" pb="0">
-          <Heading size="4">Связанные задачи</Heading>
+          <Heading size="4" mb="3">
+            Связанные задачи
+          </Heading>
+          <TaskListTools query={taskQuery} onChange={setTaskQuery} />
+          <Text as="p" size="2" color="gray" mb="3">
+            Найдено {visibleTasks.length} из {order.tasks.length}
+          </Text>
+          {visibleTasks.length === 0 && (
+            <Text as="p" color="gray" mb="3">
+              Задачи не найдены. Попробуйте изменить условия поиска.
+            </Text>
+          )}
         </Box>
         <DataTable
-          rows={order.tasks}
+          rows={visibleTasks}
           rowKey={(task) => task.id}
           columns={[
             { key: 'column-0', header: 'ID', cell: (task) => <>{task.id}</> },
