@@ -13,7 +13,7 @@ from app.db.models.item import Item
 from app.db.models.operation_type import OperationType
 from app.db.models.workstation import Workstation
 from app.db.models.unit import Unit
-from app.tasks.planning import plan_order, snapshot_routes
+from app.tasks.planning import plan_order, plan_step_tasks, snapshot_routes
 from app.db.models.order import Order, OrderLine
 from app.db.models.task import Task, TaskDependency
 from app.db.models.task_history import TaskHistory
@@ -56,19 +56,25 @@ async def create_order_tasks(session: AsyncSession, order: Order, lines: list[Or
     operations = dict((await session.execute(select(OperationType.id, OperationType.name))).all())
     workstations = dict((await session.execute(select(Workstation.id, Workstation.name))).all())
     units = dict((await session.execute(select(Unit.id, Unit.symbol))).all())
+    snapshots = {item_id: snapshot_routes(plan, items, operations, workstations, units)
+                 for item_id, plan in plans.items()}
+    steps = plan_step_tasks(snapshots)
     tasks = {}
-    for item_id, plan in plans.items():
-        routes = snapshot_routes(plan, items, operations, workstations, units)
-        task = Task(task_type='operation', status='waiting', description=order.number,
-                    planned_quantity=plan['quantity'], actual_quantity=Decimal('0'),
+    for key, step in steps.items():
+        item_id, route_key, step_number = key
+        task = Task(task_type='operation', status='waiting',
+                    description=f"{order.number} | {items[item_id]['name']}",
+                    planned_quantity=step['planned_quantity'], actual_quantity=Decimal('0'),
                     defect_quantity=Decimal('0'), order_id=order.id,
-                    order_line_id=plan['line_id'], item_id=item_id, routes=routes)
+                    order_line_id=plans[item_id]['line_id'], item_id=item_id,
+                    routes=snapshots[item_id], route_key=route_key, step_number=step_number,
+                    workstation_id=step['workstation_id'])
         session.add(task)
-        tasks[item_id] = task
+        tasks[key] = task
     await session.flush()
-    for item_id, plan in plans.items():
-        for dependency in plan['dependencies']:
-            session.add(TaskDependency(task_id=tasks[item_id].id,
+    for key, step in steps.items():
+        for dependency in sorted(step['dependencies']):
+            session.add(TaskDependency(task_id=tasks[key].id,
                                        depends_on_task_id=tasks[dependency].id))
 
 

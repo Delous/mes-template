@@ -1,4 +1,4 @@
-"""Plan one manufacturing task per item, sharing demand across an order."""
+"""Plan manufacturing quantities and route steps, sharing demand across an order."""
 from collections import defaultdict
 from decimal import Decimal, ROUND_CEILING
 
@@ -113,3 +113,34 @@ def snapshot_routes(plan, items, operations, workstations, units):
         routes.append(dict(key=route['key'], name=route['name'],
                            planned_quantity=str(quantity), steps=steps))
     return routes
+
+
+def plan_step_tasks(snapshots):
+    """Key tasks by (item, route, step); link only the steps needing each input."""
+    terminal_steps = {}
+    for item_id, routes in snapshots.items():
+        referenced = {m['source_route_key'] for route in routes for step in route['steps']
+                      for m in step['materials'] if m.get('source_route_key')}
+        terminal_steps[item_id] = {
+            (item_id, route['key'], len(route['steps']))
+            for route in routes if route['key'] not in referenced
+        }
+
+    tasks = {}
+    for item_id, routes in snapshots.items():
+        by_key = {route['key']: route for route in routes}
+        for route in routes:
+            for number, step in enumerate(route['steps'], start=1):
+                dependencies = set()
+                if number > 1:
+                    dependencies.add((item_id, route['key'], number - 1))
+                for material in step['materials']:
+                    source = material.get('source_route_key')
+                    if source:
+                        dependencies.add((item_id, source, len(by_key[source]['steps'])))
+                    else:
+                        dependencies.update(terminal_steps.get(material.get('input_item_id'), set()))
+                tasks[item_id, route['key'], number] = dict(
+                    planned_quantity=Decimal(route['planned_quantity']),
+                    workstation_id=step['workstation_id'], dependencies=dependencies)
+    return tasks

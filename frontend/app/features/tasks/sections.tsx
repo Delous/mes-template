@@ -66,7 +66,7 @@ export function TasksList({
                   </Text>
                   {task.pendingDependencies.map((dependency) => (
                     <Text key={dependency.id} as="div" size="2" color="gray">
-                      {dependency.id} · {dependency.item.name}
+                      {dependency.id} · {dependency.name}
                     </Text>
                   ))}
                 </Box>

@@ -128,7 +128,7 @@ export function OrderDetails({
               cell: (task) =>
                 task.dependencies.map((dependency) => (
                   <div key={dependency.id}>
-                    {dependency.id} · {dependency.item.name}
+                    {dependency.id} · {dependency.name}
                   </div>
                 )),
             },

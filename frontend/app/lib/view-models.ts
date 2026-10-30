@@ -9,9 +9,15 @@ import type {
 import { formatDate, formatQuantity } from './format';
 
 export function toTaskView(task: TaskDto) {
+  const route = task.routes.find((route) => route.key === task.route_key);
+  const step = task.step_number ? route?.steps[task.step_number - 1] : undefined;
+  const steps = step ? [step] : task.routes.flatMap((route) => route.steps);
   return {
     ...task,
-    title: `Сделать: ${task.name || task.item.name}`,
+    title: task.name || task.item.name,
+    workstationLabel: [...new Set(steps.map((step) => step.workstation))].join(', ') || 'Не указан',
+    operationLabel: [...new Set(steps.map((step) => step.operation))].join(', ') || 'Не указана',
+    materials: steps.flatMap((step) => step.materials),
     orderLabel: task.description || `Заказ №${task.order_id}`,
     createdLabel: formatDate(task.created_at),
     updatedLabel: formatDate(task.updated_at),

@@ -211,6 +211,9 @@ export type TaskDto = {
   id: number;
   name: string;
   routes: TaskRouteDto[];
+  route_key: string | null;
+  step_number: number | null;
+  workstation_id: number | null;
   task_type: TaskType;
   status: TaskStatus;
   description: string | null;
@@ -234,6 +237,7 @@ export type TaskDto = {
 
 export type TaskDependencyDto = {
   id: number;
+  name: string;
   description: string | null;
   status: TaskStatus;
   item: { id: number; name: string; unit_id: number };

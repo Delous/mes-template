@@ -46,6 +46,7 @@ class TaskItemResponse(BaseModel):
 
 class TaskDependencyResponse(BaseModel):
     id: int
+    name: str
     description: str | None
     status: TaskStatus
     item: TaskItemResponse
@@ -95,6 +96,9 @@ class TaskResponse(BaseModel):
     id: int
     name: str
     routes: list[TaskRouteResponse]
+    route_key: str | None
+    step_number: int | None
+    workstation_id: int | None
     task_type: TaskType
     status: TaskStatus
     description: str | None

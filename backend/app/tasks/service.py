@@ -87,6 +87,8 @@ async def get_operation_task_for_quality_review(
         select(Task).where(
             Task.order_line_id == quality_task.order_line_id,
             Task.item_id == quality_task.item_id,
+            Task.route_key == quality_task.route_key,
+            Task.step_number == quality_task.step_number,
             Task.task_type == "operation",
         )
     )

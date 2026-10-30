@@ -3,11 +3,22 @@
 import { Detail } from '@/components/detail';
 import { OrderPlanningSummary } from '@/components/order-planning-summary';
 import { TaskRouteDialog } from '@/components/task-route-dialog';
+import { formatQuantity } from '@/lib/format';
 
 import { ErrorNotice, LoadingState, PageHeader } from '@/components/page-tools';
 import { TaskStatusBadge } from '@/components/task-status';
 import type { TaskDto, TaskUpdateStatus, UserRole } from '@/types/api';
-import { Button, Card, Flex, Grid, Text, TextArea, TextField } from '@radix-ui/themes';
+import {
+  Button,
+  Card,
+  Flex,
+  Grid,
+  Heading,
+  Table,
+  Text,
+  TextArea,
+  TextField,
+} from '@radix-ui/themes';
 import { ArrowLeft, Check, Pause, Play, RotateCcw, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { FormEvent } from 'react';
@@ -61,20 +72,51 @@ export function TaskDetails({
       <Grid columns={{ initial: '1', md: '2' }} gap="4">
         <Card size="3">
           <Grid columns={{ initial: '1', sm: '2' }} gap="3">
+            <Detail label="Пост" value={task.workstationLabel} />
+            <Detail label="Операция" value={task.operationLabel} />
             <OrderPlanningSummary order={task.order} />
             <Detail label="План" value={task.plannedLabel} />
             <Detail label="Факт" value={task.actualLabel} />
             <Detail label="Брак" value={task.defectLabel} />
-          </Grid>
-        </Card>
-
-        <Card size="3">
-          <Grid columns={{ initial: '1', sm: '2' }} gap="3">
+            <Detail label="Создано" value={task.createdLabel} />
             <Detail label="Обновлено" value={task.updatedLabel} />
           </Grid>
           <Flex mt="4">
             <TaskRouteDialog task={task} />
           </Flex>
+        </Card>
+
+        <Card size="3">
+          <Heading size="4" mb="3">
+            Необходимые материалы
+          </Heading>
+          {task.materials.length ? (
+            <Table.Root>
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeaderCell>Материал / результат маршрута</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell align="right">Количество</Table.ColumnHeaderCell>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {task.materials.map((material, index) => (
+                  <Table.Row key={index}>
+                    <Table.Cell>
+                      {material.name}
+                      {material.source_route_key ? ' (результат маршрута)' : ''}
+                    </Table.Cell>
+                    <Table.Cell align="right">
+                      {formatQuantity(material.quantity)} {material.unit}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          ) : (
+            <Text size="2" color="gray">
+              Дополнительные материалы не требуются.
+            </Text>
+          )}
         </Card>
       </Grid>
       {task.pendingDependencies.length > 0 ? (
@@ -84,7 +126,7 @@ export function TaskDetails({
           </Text>
           {task.pendingDependencies.map((dependency) => (
             <Text key={dependency.id} as="div" size="2">
-              {dependency.id} · {dependency.item.name}
+              {dependency.id} · {dependency.name}
             </Text>
           ))}
         </Card>

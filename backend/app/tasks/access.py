@@ -13,6 +13,8 @@ VISIBLE_ACTIVE_STATUSES = {"waiting", "to_do", "in_progress", "blocked"}
 
 
 def route_workstation_ids(task: Task) -> set[int]:
+    if task.workstation_id is not None:
+        return {task.workstation_id}
     return {step['workstation_id'] for route in (task.routes or []) for step in route['steps']}
 
 
@@ -23,10 +25,18 @@ def visible_task_filter(user: UserPublic):
     if user.role == "operator":
         return and_(
             Task.task_type.in_(OPERATOR_TASK_TYPES),
-            or_(false(), *[
-                cast(Task.routes, JSONB).contains([{'steps': [{'workstation_id': workstation_id}]}])
-                for workstation_id in user.workstation_ids
-            ]),
+            or_(
+                Task.workstation_id.in_(user.workstation_ids),
+                and_(
+                    Task.route_key.is_(None),
+                    or_(false(), *[
+                        cast(Task.routes, JSONB).contains([
+                            {'steps': [{'workstation_id': workstation_id}]}
+                        ])
+                        for workstation_id in user.workstation_ids
+                    ]),
+                ),
+            ),
             or_(
                 and_(
                     Task.status == "in_progress",

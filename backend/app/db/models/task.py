@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 from decimal import Decimal
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, Index, Numeric, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, Integer, Numeric, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,6 +23,9 @@ class Task(Base, TimestampMixin):
     task_type: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     routes: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    route_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    step_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    workstation_id: Mapped[int | None] = mapped_column(ForeignKey('workstations.id'), nullable=True)
     planned_quantity: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
 
@@ -96,7 +99,8 @@ class Task(Base, TimestampMixin):
     )
 
     __table_args__ = (
-        UniqueConstraint('order_id', 'item_id', name='uq_tasks_order_item'),
+        UniqueConstraint('order_id', 'item_id', 'route_key', 'step_number',
+                         name='uq_tasks_order_item_route_step'),
         Index("ix_tasks_order_id", "order_id"),
         Index("ix_tasks_order_line_id", "order_line_id"),
         Index("ix_tasks_status", "status"),
@@ -105,6 +109,9 @@ class Task(Base, TimestampMixin):
 
     @property
     def name(self) -> str:
+        if self.route_key is not None and self.step_number is not None:
+            route = next(route for route in self.routes if route['key'] == self.route_key)
+            return f"{route['name']} | шаг {self.step_number}"
         return self.item.name
 
 
