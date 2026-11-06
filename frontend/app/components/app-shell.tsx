@@ -1,6 +1,7 @@
 'use client';
 
 import { roleLabels } from '@/lib/view-models';
+import { canAccessRoute } from '@/lib/route-access';
 import { Badge, Box, Button, Card, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 import { ClipboardList, Database, LogOut, PackageCheck, ShoppingCart, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -15,13 +16,13 @@ const navigation = [
     icon: <Database size={18} />,
     activePrefix: '/catalogs',
   },
-  { href: '/admin/users', label: 'Пользователи', icon: <Users size={18} />, adminOnly: true },
+  { href: '/admin/users', label: 'Пользователи', icon: <Users size={18} /> },
 ];
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { logout, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const visibleNavigation = navigation.filter((item) => !item.adminOnly || user?.role === 'admin');
+  const visibleNavigation = navigation.filter((item) => canAccessRoute(user?.role, item.href));
   const pageTitle =
     visibleNavigation.find((item) => pathname.startsWith(item.href))?.label ?? 'DevIT';
   async function handleLogout() {

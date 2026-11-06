@@ -5,14 +5,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_admin
 from app.core.schema import UserPublic
 from app.db.session import get_session
 from app.orders import service
 from app.orders.schema import CreateOrderRequest, OrderDetailResponse, OrderListResponse, UpdateOrderRequest
 
 
-router = APIRouter(prefix="/api/v1/orders", tags=["orders"])
+router = APIRouter(
+    prefix="/api/v1/orders", tags=["orders"], dependencies=[Depends(require_admin)]
+)
 
 
 @router.post("", response_model=OrderDetailResponse, status_code=status.HTTP_201_CREATED)

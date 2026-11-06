@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Cookie, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, status
 
 from app.core.config import get_settings
 from app.core.jwt import decode_token
@@ -32,3 +32,14 @@ async def get_current_user(
         role=payload.role,
         workstation_ids=payload.workstation_ids,
     )
+
+
+async def require_admin(
+    user: Annotated[UserPublic, Depends(get_current_user)],
+) -> UserPublic:
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access this section",
+        )
+    return user

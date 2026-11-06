@@ -1,6 +1,7 @@
 'use client';
 
 import { PageLayout } from '@/components/page-layout';
+import { canAccessRoute } from '@/lib/route-access';
 
 import { Callout, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ShieldAlert } from 'lucide-react';
@@ -19,12 +20,15 @@ export function ProtectedRoute({
   const { status, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const hasAccess = canAccessRoute(user?.role, pathname);
 
   useEffect(() => {
     if (status === 'anonymous') {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    } else if (status === 'authenticated' && !hasAccess) {
+      router.replace('/tasks');
     }
-  }, [pathname, router, status]);
+  }, [hasAccess, pathname, router, status]);
 
   if (status === 'loading' || status === 'anonymous') {
     return (
@@ -47,6 +51,8 @@ export function ProtectedRoute({
       </PageLayout>
     );
   }
+
+  if (!hasAccess) return null;
 
   return children;
 }

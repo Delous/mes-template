@@ -12,12 +12,14 @@ from app.admin.schema import (
     UserListResponse,
     UserResponse,
 )
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_admin
 from app.core.schema import UserPublic
 from app.db.session import get_session
 
 
-router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/api/v1/admin", tags=["admin"], dependencies=[Depends(require_admin)]
+)
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
