@@ -71,6 +71,7 @@ class TaskRouteMaterialResponse(BaseModel):
 class TaskRouteStepResponse(BaseModel):
     operation_type_id: int
     workstation_id: int
+    labor_minutes: int | None = Field(default=None, ge=0, le=2147483647, strict=True)
     operation: str
     workstation: str
     materials: list[TaskRouteMaterialResponse]

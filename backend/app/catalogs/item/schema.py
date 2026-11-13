@@ -20,6 +20,7 @@ class RouteMaterial(BaseModel):
 class RouteStep(BaseModel):
     operation_type_id: int = Field(gt=0)
     workstation_id: int = Field(gt=0)
+    labor_minutes: int | None = Field(default=None, ge=0, le=2147483647, strict=True)
     materials: list[RouteMaterial] = Field(default_factory=list)
 
 class ItemRoute(BaseModel):
@@ -69,7 +70,6 @@ class ItemBase(RoutesMixin):
     name: str = Field(min_length=1, max_length=256)
     unit_id: int = Field(gt=0)
     description: str | None = None
-    labor_minutes: int | None = Field(default=None, ge=0, le=2147483647, strict=True)
     is_product: bool = False
 class ItemCreate(ItemBase): pass
 class ItemUpdate(RoutesMixin):
@@ -78,7 +78,6 @@ class ItemUpdate(RoutesMixin):
     name: str | None = Field(default=None, min_length=1, max_length=256)
     unit_id: int | None = Field(default=None, gt=0)
     description: str | None = None
-    labor_minutes: int | None = Field(default=None, ge=0, le=2147483647, strict=True)
     is_product: bool | None = None
 class ItemResponse(ItemBase):
     group_uuid: UUID
