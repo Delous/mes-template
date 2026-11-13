@@ -3,13 +3,16 @@ import type { ItemDto, ItemPayload, ItemRoute } from '@/types/api';
 
 export const pageSize = 20;
 
+export type ItemRouteDraft = Omit<ItemRoute, 'steps'> & {
+  steps: (Omit<ItemRoute['steps'][number], 'labor_minutes'> & { labor_minutes: string })[];
+};
+
 export type ItemDraft = {
   name: string;
   unit_id: number;
   description: string;
-  labor_minutes: string;
   is_product: boolean;
-  routes: ItemRoute[];
+  routes: ItemRouteDraft[];
 };
 
 export type TreeNode = {
@@ -24,7 +27,6 @@ export function emptyDraft(unit_id: number): ItemDraft {
     name: '',
     unit_id,
     description: '',
-    labor_minutes: '',
     is_product: false,
     routes: [],
   };
@@ -35,9 +37,14 @@ export function fromItem(item: ItemDto): ItemDraft {
     name: item.name,
     unit_id: item.unit_id,
     description: item.description ?? '',
-    labor_minutes: item.labor_minutes == null ? '' : String(item.labor_minutes),
     is_product: item.is_product,
-    routes: structuredClone(item.routes),
+    routes: structuredClone(item.routes).map((route) => ({
+      ...route,
+      steps: route.steps.map((step) => ({
+        ...step,
+        labor_minutes: step.labor_minutes == null ? '' : String(step.labor_minutes),
+      })),
+    })),
   };
 }
 
@@ -45,8 +52,6 @@ export function canSave(d: ItemDraft) {
   return Boolean(
     d.name.trim() &&
     d.unit_id &&
-    (d.labor_minutes === '' ||
-      (/^\d+$/.test(d.labor_minutes) && Number(d.labor_minutes) <= 2147483647)) &&
     d.routes.every(
       (r) =>
         r.name.trim() &&
@@ -57,6 +62,8 @@ export function canSave(d: ItemDraft) {
           (step) =>
             step.operation_type_id &&
             step.workstation_id &&
+            (step.labor_minutes === '' ||
+              (/^\d+$/.test(step.labor_minutes) && Number(step.labor_minutes) <= 2147483647)) &&
             step.materials.every(
               (m) => (m.input_item_id || m.source_route_key) && Number(m.quantity) > 0,
             ),
@@ -70,13 +77,13 @@ export function toItemPayload(draft: ItemDraft): ItemPayload {
     name: draft.name.trim(),
     unit_id: draft.unit_id,
     description: draft.description.trim() || null,
-    labor_minutes: draft.labor_minutes === '' ? null : Number(draft.labor_minutes),
     is_product: draft.is_product,
     routes: draft.routes.map((route) => ({
       ...route,
       output_quantity: toDecimal(String(route.output_quantity)),
       steps: route.steps.map((step) => ({
         ...step,
+        labor_minutes: step.labor_minutes === '' ? null : Number(step.labor_minutes),
         materials: step.materials.map((material) => ({
           ...material,
           quantity: toDecimal(String(material.quantity)),

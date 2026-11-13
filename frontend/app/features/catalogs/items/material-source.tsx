@@ -11,7 +11,7 @@ export function MaterialSource({
 }: {
   material: RouteMaterial;
   items: ItemDto[];
-  routes: ItemRoute[];
+  routes: Pick<ItemRoute, 'key' | 'name'>[];
   onChange: (material: RouteMaterial) => void;
 }) {
   const value = material.source_route_key

@@ -99,7 +99,12 @@ export type ItemRoute = {
   key: string;
   name: string;
   output_quantity: string;
-  steps: { operation_type_id: number; workstation_id: number; materials: RouteMaterial[] }[];
+  steps: {
+    operation_type_id: number;
+    workstation_id: number;
+    labor_minutes?: number | null;
+    materials: RouteMaterial[];
+  }[];
 };
 
 export type ItemDto = BaseCatalogDto & {
@@ -110,7 +115,6 @@ export type ItemDto = BaseCatalogDto & {
   unit_id: number;
   unit: UnitSummary;
   description: string | null;
-  labor_minutes: number | null;
   is_product: boolean;
 };
 
@@ -119,7 +123,6 @@ export type ItemPayload = {
   name: string;
   unit_id: number;
   description?: string | null;
-  labor_minutes?: number | null;
   is_product?: boolean;
 };
 
@@ -250,6 +253,7 @@ export type TaskRouteDto = {
   steps: {
     operation_type_id: number;
     workstation_id: number;
+    labor_minutes?: number | null;
     operation: string;
     workstation: string;
     materials: {

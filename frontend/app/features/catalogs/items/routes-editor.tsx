@@ -1,24 +1,26 @@
 'use client';
 
-import { Field, SelectField } from '@/components/form-fields';
-import type { ItemDto, ItemRoute, OperationTypeDto, WorkstationDto } from '@/types/api';
-import { Button, Card, Flex, Text } from '@radix-ui/themes';
+import { Field, FormField, SelectField } from '@/components/form-fields';
+import type { ItemDto, OperationTypeDto, WorkstationDto } from '@/types/api';
+import { Button, Card, Flex, Text, TextField } from '@radix-ui/themes';
 import { Plus, Trash2 } from 'lucide-react';
 import { MaterialSource } from './material-source';
+import type { ItemRouteDraft } from './model';
 type References = { items: ItemDto[]; operations: OperationTypeDto[]; posts: WorkstationDto[] };
-type Step = ItemRoute['steps'][number];
+type Step = ItemRouteDraft['steps'][number];
 type Material = Step['materials'][number];
 const newStep = (refs: References): Step => ({
   operation_type_id: refs.operations[0]?.id ?? 0,
   workstation_id: refs.posts[0]?.id ?? 0,
+  labor_minutes: '',
   materials: [],
 });
 export function RoutesEditor({
   routes,
   onChange,
   ...refs
-}: References & { routes: ItemRoute[]; onChange: (routes: ItemRoute[]) => void }) {
-  function edit(index: number, route: ItemRoute) {
+}: References & { routes: ItemRouteDraft[]; onChange: (routes: ItemRouteDraft[]) => void }) {
+  function edit(index: number, route: ItemRouteDraft) {
     onChange(routes.map((current, i) => (i === index ? route : current)));
   }
   return (
@@ -66,10 +68,10 @@ function RouteEditor({
   onChange,
   onDelete,
 }: {
-  route: ItemRoute;
-  routes: ItemRoute[];
+  route: ItemRouteDraft;
+  routes: ItemRouteDraft[];
   refs: References;
-  onChange: (route: ItemRoute) => void;
+  onChange: (route: ItemRouteDraft) => void;
   onDelete: () => void;
 }) {
   function editStep(index: number, step: Step) {
@@ -136,7 +138,7 @@ function StepEditor({
   step: Step;
   index: number;
   count: number;
-  routes: ItemRoute[];
+  routes: ItemRouteDraft[];
   refs: References;
   onChange: (step: Step) => void;
   onMove: (offset: number) => void;
@@ -171,6 +173,17 @@ function StepEditor({
           options={refs.posts}
           onChange={(value) => onChange({ ...step, workstation_id: Number(value) })}
         />
+        <FormField label="Трудоёмкость (мин, необязательно)">
+          <TextField.Root
+            type="number"
+            min={0}
+            max={2147483647}
+            step={1}
+            placeholder="Не указана"
+            value={step.labor_minutes}
+            onChange={(event) => onChange({ ...step, labor_minutes: event.target.value })}
+          />
+        </FormField>
       </Flex>
       <Text as="p" size="2" mt="3">
         Материалы{index === 0 ? ' (обязательны)' : ' + результат предыдущего шага'}
@@ -223,7 +236,7 @@ function MaterialRow({
 }: {
   material: Material;
   items: ItemDto[];
-  routes: ItemRoute[];
+  routes: ItemRouteDraft[];
   onChange: (material: Material) => void;
   onDelete: () => void;
 }) {
