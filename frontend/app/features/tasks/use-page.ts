@@ -16,24 +16,41 @@ export function useTasksPage() {
 
   useEffect(() => {
     let active = true;
+    let requestPending = false;
     setLoading(true);
     setError(null);
 
-    const timer = setTimeout(async () => {
+    const loadTasks = async () => {
+      if (!active || requestPending) return;
+      requestPending = true;
+
       try {
         const response = await getTasks(page, pageSize, query);
         if (!active) return;
         setTasks(response.items.map(toTaskView));
         setTotal(response.total);
+        setError(null);
       } catch (caughtError) {
         if (active) setError(normalizeApiError(caughtError));
       } finally {
+        requestPending = false;
         if (active) setLoading(false);
       }
-    }, 250);
+    };
+
+    const refreshVisibleTasks = () => {
+      if (document.visibilityState === 'visible') void loadTasks();
+    };
+
+    const timer = setTimeout(() => void loadTasks(), 250);
+    const refreshTimer = setInterval(refreshVisibleTasks, 10_000);
+    document.addEventListener('visibilitychange', refreshVisibleTasks);
+
     return () => {
       active = false;
       clearTimeout(timer);
+      clearInterval(refreshTimer);
+      document.removeEventListener('visibilitychange', refreshVisibleTasks);
     };
   }, [page, query]);
 
