@@ -150,11 +150,11 @@ function TaskActions({
   const canResume = task.status === 'blocked' && ['admin', 'operator'].includes(role ?? '');
   const canBlock = task.status === 'in_progress' && role === 'admin';
   const canCompleteOperation =
-    ['to_do', 'in_progress'].includes(task.status) &&
+    task.status === 'in_progress' &&
     task.task_type === 'operation' &&
     (role === 'operator' || role === 'admin');
   const canCompleteSimple =
-    ['to_do', 'in_progress'].includes(task.status) &&
+    task.status === 'in_progress' &&
     task.task_type !== 'operation' &&
     (role === 'operator' || role === 'reviewer' || role === 'admin');
   const canReject =

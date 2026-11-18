@@ -32,9 +32,6 @@ TASK_STATUS_FLOW: TaskStatusFlowType = {
         "in_progress": {
             "roles": {"operator", "reviewer", "admin"},
         },
-        "done": {
-            "roles": {"operator", "reviewer", "admin"},
-        },
         "cancelled": {
             "roles": {"admin"},
         },
